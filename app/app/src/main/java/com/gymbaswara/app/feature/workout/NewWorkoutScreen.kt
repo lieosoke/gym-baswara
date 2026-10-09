@@ -37,9 +37,12 @@ import com.gymbaswara.app.feature.exercises.ExerciseListScreen
 @Composable
 fun NewWorkoutScreen(
     onStartTemplate: (String) -> Unit,
+    onResumeWorkout: () -> Unit,
     viewModel: NewWorkoutViewModel = hiltViewModel()
 ) {
     val routines by viewModel.routines.collectAsState()
+    val isWorkoutActive by viewModel.isWorkoutActive.collectAsState()
+    val activeRoutineId by viewModel.activeRoutineId.collectAsState()
     
     var showRoutineDialog by remember { mutableStateOf(false) }
     var routineToEdit by remember { mutableStateOf<Routine?>(null) }
@@ -192,9 +195,13 @@ fun NewWorkoutScreen(
                                     }
                                 } else {
                                     routines.forEach { routine ->
+                                        val isActiveRoutine = isWorkoutActive && routine.id == activeRoutineId
                                         RoutineCard(
                                             routine = routine,
-                                            onClick = { onStartTemplate(routine.id) },
+                                            isActiveRoutine = isActiveRoutine,
+                                            onClick = { 
+                                                if (isActiveRoutine) onResumeWorkout() else onStartTemplate(routine.id)
+                                            },
                                             onEdit = { 
                                                 routineToEdit = routine
                                                 showRoutineDialog = true
@@ -215,6 +222,7 @@ fun NewWorkoutScreen(
 @Composable
 fun RoutineCard(
     routine: Routine,
+    isActiveRoutine: Boolean = false,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -294,12 +302,12 @@ fun RoutineCard(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(100.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurface
+                    containerColor = if (isActiveRoutine) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = if (isActiveRoutine) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurface
                 )
             ) {
                 Text(
-                    text = "Buka",
+                    text = if (isActiveRoutine) "Lanjutkan Latihan" else "Buka",
                     modifier = Modifier.padding(vertical = 4.dp),
                     fontWeight = FontWeight.Bold
                 )

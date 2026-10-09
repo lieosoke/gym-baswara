@@ -27,11 +27,13 @@ import java.util.Locale
 fun HomeScreen(
     onNavigateToWorkout: () -> Unit,
     onNavigateToProgress: () -> Unit,
+    onResumeWorkout: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val weeklyStats by viewModel.weeklyStats.collectAsState()
     val monthlyStats by viewModel.monthlyStats.collectAsState()
     val yearlyStats by viewModel.yearlyStats.collectAsState()
+    val isWorkoutActive by viewModel.isWorkoutActive.collectAsState()
     
     var selectedTabIndex by remember { mutableStateOf(0) }
     val tabTitles = listOf("Minggu", "Bulan", "Tahun")
@@ -62,13 +64,13 @@ fun HomeScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Halo, Athlete!",
+                            text = "Halo Gengs!",
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
-                            text = "Siap untuk memecahkan rekor hari ini?",
+                            text = "Selagi sehat kita gas Sehattt terus.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -79,11 +81,11 @@ fun HomeScreen(
             item {
                 // Banner Mulai Latihan - High Contrast Neon CTA
                 Card(
-                    onClick = onNavigateToWorkout,
+                    onClick = if (isWorkoutActive) onResumeWorkout else onNavigateToWorkout,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primary
+                        containerColor = if (isWorkoutActive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Row(
@@ -95,16 +97,16 @@ fun HomeScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Mulai Latihan",
+                                text = if (isWorkoutActive) "Lanjutkan Latihan" else "Mulai Latihan",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onPrimary
+                                color = if (isWorkoutActive) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onPrimary
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Lanjutkan program rutinitas Anda",
+                                text = if (isWorkoutActive) "Sesi latihan Anda sedang berjalan" else "Lanjutkan program rutinitas Anda",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                                color = if (isWorkoutActive) MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                             )
                         }
                         
@@ -112,13 +114,13 @@ fun HomeScreen(
                             modifier = Modifier
                                 .size(56.dp)
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.onPrimary),
+                                .background(if (isWorkoutActive) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onPrimary),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Default.PlayArrow, 
-                                contentDescription = "Mulai Latihan",
-                                tint = MaterialTheme.colorScheme.primary,
+                                contentDescription = if (isWorkoutActive) "Lanjutkan Latihan" else "Mulai Latihan",
+                                tint = if (isWorkoutActive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(32.dp)
                             )
                         }

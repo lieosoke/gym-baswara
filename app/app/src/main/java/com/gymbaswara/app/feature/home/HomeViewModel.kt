@@ -14,7 +14,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val workoutRepository: WorkoutRepository
+    private val workoutRepository: WorkoutRepository,
+    sessionManager: com.gymbaswara.app.feature.workout.WorkoutSessionManager
 ) : ViewModel() {
 
     private fun getStartOfWeek(): Long {
@@ -67,4 +68,6 @@ class HomeViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
         )
+
+    val isWorkoutActive: StateFlow<Boolean> = sessionManager.isActive
 }

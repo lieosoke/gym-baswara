@@ -14,10 +14,13 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
+import kotlinx.coroutines.flow.map
+
 @HiltViewModel
 class NewWorkoutViewModel @Inject constructor(
     private val routineRepository: RoutineRepository,
-    exerciseRepository: ExerciseRepository
+    exerciseRepository: ExerciseRepository,
+    sessionManager: WorkoutSessionManager
 ) : ViewModel() {
 
     val routines: StateFlow<List<Routine>> = routineRepository.getAllRoutines()
@@ -25,6 +28,12 @@ class NewWorkoutViewModel @Inject constructor(
 
     val allExercises: StateFlow<List<Exercise>> = exerciseRepository.getExercises()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val isWorkoutActive: StateFlow<Boolean> = sessionManager.isActive
+
+    val activeRoutineId: StateFlow<String?> = sessionManager.dataState
+        .map { it.routineId }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     fun saveRoutine(id: String?, name: String, description: String?, selectedExercises: List<com.gymbaswara.app.domain.model.RoutineExercise>) {
         if (name.isBlank() || selectedExercises.isEmpty()) return

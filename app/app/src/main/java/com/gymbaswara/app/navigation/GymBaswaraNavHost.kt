@@ -53,14 +53,16 @@ fun GymBaswaraNavHost(
         composable("home") {
             HomeScreen(
                 onNavigateToWorkout = { navController.navigate("workout_menu") },
-                onNavigateToProgress = { navController.navigate("progress") }
+                onNavigateToProgress = { navController.navigate("progress") },
+                onResumeWorkout = { navController.navigate("active_workout") }
             )
         }
         composable("workout_menu") {
             NewWorkoutScreen(
                 onStartTemplate = { routineId ->
                     navController.navigate("workout_preview?routineId=${Uri.encode(routineId)}")
-                }
+                },
+                onResumeWorkout = { navController.navigate("active_workout") }
             )
         }
         composable(
