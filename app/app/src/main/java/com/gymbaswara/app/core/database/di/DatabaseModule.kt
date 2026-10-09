@@ -43,7 +43,7 @@ object DatabaseModule {
             GymBaswaraDatabase::class.java,
             "gymbaswara.db"
         )
-        .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_3_5)
+        .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_3_5, GymBaswaraDatabase.MIGRATION_5_6)
         .addCallback(object : RoomDatabase.Callback() {
             override fun onOpen(db: SupportSQLiteDatabase) {
                 super.onOpen(db)

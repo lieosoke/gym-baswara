@@ -7,6 +7,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gymbaswara.app.domain.repository.RoutineRepository
+import com.gymbaswara.app.domain.model.Routine
+import com.gymbaswara.app.domain.model.Exercise
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +29,7 @@ class WorkoutPreviewViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val routineId: String? = savedStateHandle["routineId"]
+    private var originalRoutine: Routine? = null
 
     private val _uiState = MutableStateFlow(WorkoutPreviewUiState())
     val uiState: StateFlow<WorkoutPreviewUiState> = _uiState.asStateFlow()
@@ -41,6 +44,7 @@ class WorkoutPreviewViewModel @Inject constructor(
         viewModelScope.launch {
             val routine = routineRepository.getRoutineById(id).firstOrNull()
             if (routine != null) {
+                originalRoutine = routine
                 val routineExercises = routine.exercises.map { exercise ->
                     WorkoutExerciseState(
                         exerciseId = exercise.id,
@@ -94,6 +98,42 @@ class WorkoutPreviewViewModel @Inject constructor(
                 Collections.swap(newList, index, index + 1)
                 state.copy(exercises = newList)
             }
+        }
+    }
+
+    fun saveRoutineChanges(onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            val state = _uiState.value
+            val original = originalRoutine ?: return@launch
+
+            // Create placeholder Exercise objects since RoutineRepositoryImpl 
+            // only requires exercise.id to recreate the cross-references.
+            val updatedExercises = state.exercises.map { ex ->
+                Exercise(
+                    id = ex.exerciseId,
+                    name = ex.exerciseName,
+                    description = null,
+                    equipment = null,
+                    movementType = null,
+                    difficulty = null,
+                    primaryMuscle = null,
+                    instructions = null,
+                    imageUrl = null,
+                    isSystem = false
+                )
+            }
+            
+            val newRoutine = original.copy(
+                name = state.routineName,
+                exercises = updatedExercises,
+                updatedAt = System.currentTimeMillis()
+            )
+            
+            routineRepository.saveRoutine(newRoutine)
+            
+            // Perbarui originalRoutine dengan yang baru
+            originalRoutine = newRoutine
+            onComplete()
         }
     }
 

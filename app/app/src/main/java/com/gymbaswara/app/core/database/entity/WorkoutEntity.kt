@@ -15,6 +15,7 @@ data class WorkoutEntity(
     val durationSeconds: Int,
     val totalVolume: Double,
     val status: String,
+    val syncStatus: String = "PENDING",
     val createdAt: Long,
     val updatedAt: Long
 )

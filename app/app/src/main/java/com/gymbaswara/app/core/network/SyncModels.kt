@@ -22,5 +22,20 @@ data class WorkoutDto(
     @SerializedName("completed_at") val completedAt: Long?,
     @SerializedName("duration_seconds") val durationSeconds: Int,
     @SerializedName("total_volume") val totalVolume: Double,
-    @SerializedName("status") val status: String
+    @SerializedName("status") val status: String,
+    @SerializedName("exercises") val exercises: List<WorkoutExerciseDto>
+)
+
+data class WorkoutExerciseDto(
+    @SerializedName("id") val id: String,
+    @SerializedName("exercise_id") val exerciseId: String,
+    @SerializedName("sets") val sets: List<WorkoutSetDto>
+)
+
+data class WorkoutSetDto(
+    @SerializedName("id") val id: String,
+    @SerializedName("set_number") val setNumber: Int,
+    @SerializedName("weight") val weight: Double,
+    @SerializedName("reps") val reps: Int,
+    @SerializedName("is_completed") val isCompleted: Boolean
 )

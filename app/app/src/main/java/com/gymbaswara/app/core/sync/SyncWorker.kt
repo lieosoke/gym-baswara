@@ -8,9 +8,10 @@ import com.gymbaswara.app.core.database.dao.WorkoutDao
 import com.gymbaswara.app.core.network.GymBaswaraApi
 import com.gymbaswara.app.core.network.SyncRequest
 import com.gymbaswara.app.core.network.WorkoutDto
+import com.gymbaswara.app.core.network.WorkoutExerciseDto
+import com.gymbaswara.app.core.network.WorkoutSetDto
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.flow.first
 
 @HiltWorker
 class SyncWorker @AssistedInject constructor(
@@ -22,25 +23,46 @@ class SyncWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         return try {
-            // Get all completed workouts (simple logic for now)
-            val workouts = workoutDao.getWorkouts().first()
+            val pendingWorkouts = workoutDao.getPendingWorkouts()
             
-            val workoutDtos = workouts.map {
+            if (pendingWorkouts.isEmpty()) {
+                return Result.success()
+            }
+            
+            val workoutDtos = pendingWorkouts.map { detail ->
                 WorkoutDto(
-                    id = it.id,
-                    name = it.name,
-                    startedAt = it.startedAt,
-                    completedAt = it.completedAt,
-                    durationSeconds = it.durationSeconds,
-                    totalVolume = it.totalVolume,
-                    status = it.status
+                    id = detail.workout.id,
+                    name = detail.workout.name,
+                    startedAt = detail.workout.startedAt,
+                    completedAt = detail.workout.completedAt,
+                    durationSeconds = detail.workout.durationSeconds,
+                    totalVolume = detail.workout.totalVolume,
+                    status = detail.workout.status,
+                    exercises = detail.exercises.map { exerciseWithSets ->
+                        WorkoutExerciseDto(
+                            id = exerciseWithSets.exercise.id,
+                            exerciseId = exerciseWithSets.exercise.exerciseId,
+                            sets = exerciseWithSets.sets.map { set ->
+                                WorkoutSetDto(
+                                    id = set.id,
+                                    setNumber = set.setNumber,
+                                    weight = set.weight,
+                                    reps = set.reps,
+                                    isCompleted = set.isCompleted
+                                )
+                            }
+                        )
+                    }
                 )
             }
             
             val request = SyncRequest(workouts = workoutDtos)
             val response = api.pushData(request)
             
-            if (response.isSuccessful) {
+            if (response.isSuccessful && response.body()?.data?.success == true) {
+                // Update room database to SYNCED
+                val ids = pendingWorkouts.map { it.workout.id }
+                workoutDao.updateSyncStatus(ids)
                 Result.success()
             } else {
                 Result.retry()

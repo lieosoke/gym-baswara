@@ -21,6 +21,7 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     onNavigateToWorkout: () -> Unit,
+    onNavigateToProgress: () -> Unit,
 
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -155,8 +156,10 @@ fun HomeScreen(
                 ) {
                     val sessionCount = currentStats?.sessionCount ?: 0
                     val volumeKg = currentStats?.totalVolume ?: 0.0
+                    val durationSec = currentStats?.totalDurationSeconds ?: 0
                     
                     val (volValue, volUnit) = formatVolume(volumeKg)
+                    val (durValue, durUnit) = formatDuration(durationSec)
                     
                     StatCard(
                         title = "Latihan",
@@ -170,6 +173,47 @@ fun HomeScreen(
                         subtitle = volUnit,
                         modifier = Modifier.weight(1f)
                     )
+                    StatCard(
+                        title = "Durasi",
+                        value = durValue,
+                        subtitle = durUnit,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // Grafik Progres
+                Card(
+                    onClick = onNavigateToProgress,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Lihat Grafik PR",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Pantau perkembangan beban maksimal Anda",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -182,6 +226,16 @@ fun formatVolume(volumeKg: Double): Pair<String, String> {
         Pair(String.format(Locale.US, "%.1f", ton), "Ton")
     } else {
         Pair(String.format(Locale.US, "%.0f", volumeKg), "Kg")
+    }
+}
+
+fun formatDuration(seconds: Int): Pair<String, String> {
+    val hours = seconds / 3600
+    val minutes = (seconds % 3600) / 60
+    return if (hours > 0) {
+        Pair(String.format(Locale.US, "%d:%02d", hours, minutes), "Jam")
+    } else {
+        Pair(minutes.toString(), "Menit")
     }
 }
 

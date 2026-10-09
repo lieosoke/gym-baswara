@@ -12,6 +12,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -28,6 +30,7 @@ fun WorkoutPreviewScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showExerciseSelection by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     if (showExerciseSelection) {
         ExerciseListScreen(
@@ -51,6 +54,19 @@ fun WorkoutPreviewScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                    }
+                },
+                actions = {
+                    if (uiState.routineId != null) {
+                        TextButton(
+                            onClick = { 
+                                viewModel.saveRoutineChanges {
+                                    Toast.makeText(context, "Perubahan disimpan", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        ) {
+                            Text("Simpan", fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             )

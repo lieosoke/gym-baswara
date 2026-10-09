@@ -38,6 +38,7 @@ class ActiveWorkoutService : Service() {
         const val ACTION_PAUSE = "ACTION_PAUSE"
         const val ACTION_RESUME = "ACTION_RESUME"
         const val ACTION_FINISH = "ACTION_FINISH"
+        const val ACTION_SKIP_REST = "ACTION_SKIP_REST"
     }
 
     override fun onCreate() {
@@ -62,14 +63,17 @@ class ActiveWorkoutService : Service() {
                     stopSelf()
                 }
             }
+            ACTION_SKIP_REST -> {
+                sessionManager.skipRestTimer()
+            }
         }
         return START_STICKY
     }
 
     private fun observeWorkoutState() {
-        sessionManager.uiState.onEach { state ->
+        sessionManager.timerState.onEach { timerState ->
             if (sessionManager.isActive.value) {
-                updateNotification(state, sessionManager.isPaused.value)
+                updateNotification(sessionManager.dataState.value, timerState, sessionManager.isPaused.value)
             } else {
                 stopSelf()
             }
@@ -77,7 +81,7 @@ class ActiveWorkoutService : Service() {
 
         sessionManager.isPaused.onEach { isPaused ->
             if (sessionManager.isActive.value) {
-                updateNotification(sessionManager.uiState.value, isPaused)
+                updateNotification(sessionManager.dataState.value, sessionManager.timerState.value, isPaused)
             }
         }.launchIn(serviceScope)
         
@@ -89,16 +93,16 @@ class ActiveWorkoutService : Service() {
     }
 
     private fun startForegroundService() {
-        val notification = buildNotification(sessionManager.uiState.value, sessionManager.isPaused.value)
+        val notification = buildNotification(sessionManager.dataState.value, sessionManager.timerState.value, sessionManager.isPaused.value)
         startForeground(notificationId, notification)
     }
 
-    private fun updateNotification(state: ActiveWorkoutUiState, isPaused: Boolean) {
+    private fun updateNotification(dataState: ActiveWorkoutDataState, timerState: ActiveWorkoutTimerState, isPaused: Boolean) {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(notificationId, buildNotification(state, isPaused))
+        notificationManager.notify(notificationId, buildNotification(dataState, timerState, isPaused))
     }
 
-    private fun buildNotification(state: ActiveWorkoutUiState, isPaused: Boolean): Notification {
+    private fun buildNotification(dataState: ActiveWorkoutDataState, timerState: ActiveWorkoutTimerState, isPaused: Boolean): Notification {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
@@ -129,18 +133,54 @@ class ActiveWorkoutService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val pauseResumeText = if (isPaused) "Lanjut" else "Jeda"
+        val activeExercise = dataState.exercises.lastOrNull { exercise -> 
+            exercise.sets.any { !it.isCompleted } 
+        } ?: dataState.exercises.lastOrNull()
+        
+        val exerciseText = if (activeExercise != null) {
+            val activeSet = activeExercise.sets.firstOrNull { !it.isCompleted } ?: activeExercise.sets.lastOrNull()
+            if (activeSet != null) {
+                "${activeExercise.exerciseName} - Set ${activeSet.setNumber}"
+            } else {
+                activeExercise.exerciseName
+            }
+        } else {
+            "Mulai Latihan"
+        }
 
-        return NotificationCompat.Builder(this, channelId)
-            .setContentTitle(state.workoutName)
-            .setContentText("Durasi: ${state.formattedWorkoutTimer}")
+        val contentText = if (timerState.isRestTimerActive) {
+            "Istirahat: ${timerState.formattedRestTimer} | $exerciseText"
+        } else {
+            "Durasi: ${timerState.formattedWorkoutTimer} | $exerciseText"
+        }
+
+        val builder = NotificationCompat.Builder(this, channelId)
+            .setContentTitle(dataState.workoutName)
+            .setContentText(contentText)
             .setSmallIcon(R.mipmap.ic_launcher) // Use a proper icon in real app
             .setContentIntent(pendingIntent)
             .setOngoing(true)
-            .addAction(0, pauseResumeText, pauseResumePendingIntent)
-            .addAction(0, "Selesai", finishPendingIntent)
             .setOnlyAlertOnce(true)
-            .build()
+
+        if (timerState.isRestTimerActive) {
+            val skipRestActionIntent = Intent(this, ActiveWorkoutService::class.java).apply {
+                action = ACTION_SKIP_REST
+            }
+            val skipRestPendingIntent = PendingIntent.getService(
+                this,
+                3,
+                skipRestActionIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.addAction(0, "Skip Rest", skipRestPendingIntent)
+        } else {
+            val pauseResumeText = if (isPaused) "Lanjut" else "Jeda"
+            builder.addAction(0, pauseResumeText, pauseResumePendingIntent)
+        }
+
+        builder.addAction(0, "Selesai", finishPendingIntent)
+
+        return builder.build()
     }
 
     private fun createNotificationChannel() {

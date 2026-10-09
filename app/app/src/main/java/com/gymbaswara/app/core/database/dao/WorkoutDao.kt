@@ -8,11 +8,18 @@ import androidx.room.Transaction
 import com.gymbaswara.app.core.database.entity.WorkoutEntity
 import com.gymbaswara.app.core.database.entity.WorkoutExerciseEntity
 import com.gymbaswara.app.core.database.entity.WorkoutSetEntity
+import com.gymbaswara.app.core.database.entity.WorkoutWithDetails
 import kotlinx.coroutines.flow.Flow
 
 data class ActivityStats(
     val sessionCount: Int,
-    val totalVolume: Double
+    val totalVolume: Double,
+    val totalDurationSeconds: Int
+)
+
+data class PRDataPoint(
+    val dateMillis: Long,
+    val maxWeight: Double
 )
 
 @Dao
@@ -29,7 +36,14 @@ interface WorkoutDao {
     @Query("SELECT * FROM workouts ORDER BY startedAt DESC")
     fun getWorkouts(): Flow<List<WorkoutEntity>>
 
-    @Query("SELECT COUNT(id) as sessionCount, COALESCE(SUM(totalVolume), 0.0) as totalVolume FROM workouts WHERE startedAt >= :startTime AND status = 'completed'")
+    @Transaction
+    @Query("SELECT * FROM workouts WHERE syncStatus = 'PENDING' AND status = 'completed'")
+    suspend fun getPendingWorkouts(): List<WorkoutWithDetails>
+
+    @Query("UPDATE workouts SET syncStatus = 'SYNCED' WHERE id IN (:workoutIds)")
+    suspend fun updateSyncStatus(workoutIds: List<String>)
+
+    @Query("SELECT COUNT(id) as sessionCount, COALESCE(SUM(totalVolume), 0.0) as totalVolume, COALESCE(SUM(durationSeconds), 0) as totalDurationSeconds FROM workouts WHERE startedAt >= :startTime AND status = 'completed'")
     fun getStatsSince(startTime: Long): Flow<ActivityStats>
 
     @Transaction
@@ -61,4 +75,15 @@ interface WorkoutDao {
         ORDER BY ws.setNumber ASC
     """)
     suspend fun getLastPerformanceSets(exerciseId: String): List<WorkoutSetEntity>
+
+    @Query("""
+        SELECT w.startedAt AS dateMillis, MAX(ws.weight) AS maxWeight 
+        FROM workout_sets ws
+        INNER JOIN workout_exercises we ON ws.workoutExerciseId = we.id
+        INNER JOIN workouts w ON we.workoutId = w.id
+        WHERE we.exerciseId = :exerciseId AND ws.isCompleted = 1 AND w.status = 'completed'
+        GROUP BY w.id
+        ORDER BY w.startedAt ASC
+    """)
+    fun getPRProgression(exerciseId: String): Flow<List<PRDataPoint>>
 }

@@ -19,6 +19,7 @@ import com.gymbaswara.app.feature.workout.ActiveWorkoutScreen
 import com.gymbaswara.app.feature.workout.NewWorkoutScreen
 import com.gymbaswara.app.feature.workout.WorkoutPreviewScreen
 import com.gymbaswara.app.feature.splash.SplashScreen
+import com.gymbaswara.app.feature.progress.ProgressScreen
 
 @Composable
 fun GymBaswaraNavHost(
@@ -51,7 +52,8 @@ fun GymBaswaraNavHost(
         }
         composable("home") {
             HomeScreen(
-                onNavigateToWorkout = { navController.navigate("workout_menu") }
+                onNavigateToWorkout = { navController.navigate("workout_menu") },
+                onNavigateToProgress = { navController.navigate("progress") }
             )
         }
         composable("workout_menu") {
@@ -92,6 +94,9 @@ fun GymBaswaraNavHost(
         }
         composable("exercises") {
             ExerciseListScreen()
+        }
+        composable("progress") {
+            ProgressScreen()
         }
     }
 }

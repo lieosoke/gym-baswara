@@ -3,6 +3,8 @@ package com.gymbaswara.app.data.repository
 import kotlinx.coroutines.flow.map
 
 import android.content.Context
+import androidx.work.Constraints
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.gymbaswara.app.core.database.dao.WorkoutDao
@@ -69,7 +71,13 @@ class WorkoutRepositoryImpl @Inject constructor(
         workoutDao.insertWorkoutWithDetails(workoutEntity, exerciseEntities, setEntities)
 
         // Trigger background sync
-        val syncWorkRequest = OneTimeWorkRequestBuilder<SyncWorker>().build()
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+            
+        val syncWorkRequest = OneTimeWorkRequestBuilder<SyncWorker>()
+            .setConstraints(constraints)
+            .build()
         WorkManager.getInstance(context).enqueue(syncWorkRequest)
     }
 
@@ -94,8 +102,20 @@ class WorkoutRepositoryImpl @Inject constructor(
         return workoutDao.getStatsSince(startTime).map { daoStats ->
             com.gymbaswara.app.domain.model.ActivityStats(
                 sessionCount = daoStats.sessionCount,
-                totalVolume = daoStats.totalVolume
+                totalVolume = daoStats.totalVolume,
+                totalDurationSeconds = daoStats.totalDurationSeconds
             )
+        }
+    }
+
+    override fun getPRProgression(exerciseId: String): kotlinx.coroutines.flow.Flow<List<com.gymbaswara.app.domain.model.PRProgression>> {
+        return workoutDao.getPRProgression(exerciseId).map { list ->
+            list.map { point ->
+                com.gymbaswara.app.domain.model.PRProgression(
+                    dateMillis = point.dateMillis,
+                    maxWeight = point.maxWeight
+                )
+            }
         }
     }
 }

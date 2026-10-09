@@ -40,13 +40,16 @@ data class WorkoutExerciseState(
     val sets: List<WorkoutSetState> = listOf(WorkoutSetState(setNumber = 1))
 )
 
-data class ActiveWorkoutUiState(
+data class ActiveWorkoutDataState(
     val workoutName: String = "Latihan Baru",
     val routineId: String? = null,
+    val exercises: List<WorkoutExerciseState> = emptyList()
+)
+
+data class ActiveWorkoutTimerState(
     val workoutDurationSeconds: Int = 0,
     val isRestTimerActive: Boolean = false,
-    val restTimerSeconds: Int = 0,
-    val exercises: List<WorkoutExerciseState> = emptyList()
+    val restTimerSeconds: Int = 0
 ) {
     val formattedWorkoutTimer: String
         get() {
@@ -74,7 +77,8 @@ class ActiveWorkoutViewModel @Inject constructor(
     val allExercises: StateFlow<List<com.gymbaswara.app.domain.model.Exercise>> = exerciseRepository.getExercises()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val uiState: StateFlow<ActiveWorkoutUiState> = sessionManager.uiState
+    val dataState: StateFlow<ActiveWorkoutDataState> = sessionManager.dataState
+    val timerState: StateFlow<ActiveWorkoutTimerState> = sessionManager.timerState
     val isPaused: StateFlow<Boolean> = sessionManager.isPaused
 
     fun updateWorkoutName(name: String) = sessionManager.updateWorkoutName(name)

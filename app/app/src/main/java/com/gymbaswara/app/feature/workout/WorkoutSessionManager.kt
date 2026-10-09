@@ -30,8 +30,11 @@ class WorkoutSessionManager @Inject constructor(
 ) {
     private val scope = CoroutineScope(Dispatchers.Main)
 
-    private val _uiState = MutableStateFlow(ActiveWorkoutUiState())
-    val uiState: StateFlow<ActiveWorkoutUiState> = _uiState.asStateFlow()
+    private val _dataState = MutableStateFlow(ActiveWorkoutDataState())
+    val dataState: StateFlow<ActiveWorkoutDataState> = _dataState.asStateFlow()
+    
+    private val _timerState = MutableStateFlow(ActiveWorkoutTimerState())
+    val timerState: StateFlow<ActiveWorkoutTimerState> = _timerState.asStateFlow()
 
     private val _isActive = MutableStateFlow(false)
     val isActive: StateFlow<Boolean> = _isActive.asStateFlow()
@@ -40,7 +43,10 @@ class WorkoutSessionManager @Inject constructor(
     val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
 
     private var timerJob: Job? = null
-    private var lastTickTime: Long = 0
+    private var workoutStartTime: Long = 0L
+    private var totalPausedDurationMillis: Long = 0L
+    private var pauseStartTime: Long = 0L
+    private var targetRestEndTime: Long = 0L
 
     fun startWorkout(routineId: String?, routineName: String?, exercises: List<WorkoutExerciseState> = emptyList()) {
         if (_isActive.value) return
@@ -48,14 +54,21 @@ class WorkoutSessionManager @Inject constructor(
         _isActive.value = true
         _isPaused.value = false
         
-        _uiState.value = ActiveWorkoutUiState(
+        _dataState.value = ActiveWorkoutDataState(
             workoutName = routineName ?: "Latihan Baru",
             routineId = routineId,
-            exercises = exercises,
+            exercises = exercises
+        )
+        
+        _timerState.value = ActiveWorkoutTimerState(
             workoutDurationSeconds = 0,
             restTimerSeconds = 0,
             isRestTimerActive = false
         )
+        
+        workoutStartTime = SystemClock.elapsedRealtime()
+        totalPausedDurationMillis = 0L
+        targetRestEndTime = 0L
         
         startTimer()
         loadHistoryForExercises()
@@ -63,7 +76,7 @@ class WorkoutSessionManager @Inject constructor(
 
     private fun loadHistoryForExercises() {
         scope.launch {
-            val currentExercises = _uiState.value.exercises
+            val currentExercises = _dataState.value.exercises
             val updatedExercises = currentExercises.map { ex ->
                 val historyText = workoutRepository.getLastPerformance(ex.exerciseId) ?: "Belum ada riwayat"
                 val historySets = workoutRepository.getLastPerformanceSets(ex.exerciseId)
@@ -84,67 +97,72 @@ class WorkoutSessionManager @Inject constructor(
 
                 ex.copy(lastPerformance = historyText, sets = setsToUse)
             }
-            _uiState.update { it.copy(exercises = updatedExercises) }
+            _dataState.update { it.copy(exercises = updatedExercises) }
         }
     }
 
     private fun startTimer() {
         timerJob?.cancel()
-        lastTickTime = SystemClock.elapsedRealtime()
         timerJob = scope.launch {
             while (true) {
                 delay(1000)
-                if (_isPaused.value) {
-                    lastTickTime = SystemClock.elapsedRealtime() // prevent jumping when resumed
-                    continue
-                }
+                if (_isPaused.value) continue
                 
-                val currentTickTime = SystemClock.elapsedRealtime()
-                val deltaMillis = currentTickTime - lastTickTime
-                val deltaSeconds = (deltaMillis / 1000).toInt()
+                val now = SystemClock.elapsedRealtime()
+                val effectiveRunTime = now - workoutStartTime - totalPausedDurationMillis
+                val currentDurationSeconds = (effectiveRunTime / 1000).toInt().coerceAtLeast(0)
                 
-                if (deltaSeconds > 0) {
-                    lastTickTime += deltaSeconds * 1000L
+                _timerState.update { state ->
+                    var newRestTimer = 0
+                    var restActive = state.isRestTimerActive
                     
-                    _uiState.update { state ->
-                        val newWorkoutDuration = state.workoutDurationSeconds + deltaSeconds
-                        var newRestTimer = state.restTimerSeconds
-                        var restActive = state.isRestTimerActive
-    
-                        if (restActive) {
-                            newRestTimer -= deltaSeconds
-                            if (newRestTimer <= 0) {
-                                restActive = false
-                                newRestTimer = 0
-                            }
+                    if (restActive && targetRestEndTime > 0) {
+                        val remainingMillis = targetRestEndTime - now
+                        if (remainingMillis <= 0) {
+                            restActive = false
+                            newRestTimer = 0
+                            targetRestEndTime = 0L
+                        } else {
+                            newRestTimer = (remainingMillis / 1000).toInt()
                         }
-    
-                        state.copy(
-                            workoutDurationSeconds = newWorkoutDuration,
-                            restTimerSeconds = newRestTimer,
-                            isRestTimerActive = restActive
-                        )
+                    } else if (restActive) {
+                        restActive = false
                     }
+                    
+                    state.copy(
+                        workoutDurationSeconds = currentDurationSeconds,
+                        restTimerSeconds = newRestTimer,
+                        isRestTimerActive = restActive
+                    )
                 }
             }
         }
     }
 
     fun pauseTimer() {
-        _isPaused.value = true
+        if (!_isPaused.value) {
+            _isPaused.value = true
+            pauseStartTime = SystemClock.elapsedRealtime()
+        }
     }
 
     fun resumeTimer() {
-        _isPaused.value = false
-        lastTickTime = SystemClock.elapsedRealtime()
+        if (_isPaused.value) {
+            _isPaused.value = false
+            val pausedFor = SystemClock.elapsedRealtime() - pauseStartTime
+            totalPausedDurationMillis += pausedFor
+            if (targetRestEndTime > 0) {
+                targetRestEndTime += pausedFor
+            }
+        }
     }
 
     fun updateWorkoutName(name: String) {
-        _uiState.update { it.copy(workoutName = name) }
+        _dataState.update { it.copy(workoutName = name) }
     }
 
     fun addExercise(id: String, name: String) {
-        _uiState.update { state ->
+        _dataState.update { state ->
             val newExercise = WorkoutExerciseState(exerciseId = id, exerciseName = name)
             state.copy(exercises = state.exercises + newExercise)
         }
@@ -152,7 +170,7 @@ class WorkoutSessionManager @Inject constructor(
     }
 
     fun addSet(exerciseId: String) {
-        _uiState.update { state ->
+        _dataState.update { state ->
             state.copy(
                 exercises = state.exercises.map { exercise ->
                     if (exercise.id == exerciseId) {
@@ -167,7 +185,7 @@ class WorkoutSessionManager @Inject constructor(
     }
 
     fun removeSet(exerciseId: String, setId: String) {
-        _uiState.update { state ->
+        _dataState.update { state ->
             state.copy(
                 exercises = state.exercises.map { exercise ->
                     if (exercise.id == exerciseId) {
@@ -183,8 +201,8 @@ class WorkoutSessionManager @Inject constructor(
     }
 
     fun updateSet(exerciseId: String, setId: String, weight: String? = null, reps: String? = null, isCompleted: Boolean? = null) {
-        _uiState.update { state ->
-            var shouldStartRest = false
+        var shouldStartRest = false
+        _dataState.update { state ->
             val newExercises = state.exercises.map { exercise ->
                 if (exercise.id == exerciseId) {
                     exercise.copy(
@@ -212,21 +230,29 @@ class WorkoutSessionManager @Inject constructor(
                 }
             }
 
-            state.copy(
-                exercises = newExercises,
-                isRestTimerActive = if (shouldStartRest) true else state.isRestTimerActive,
-                restTimerSeconds = if (shouldStartRest) 90 else state.restTimerSeconds
-            )
+            state.copy(exercises = newExercises)
+        }
+
+        if (shouldStartRest) {
+            targetRestEndTime = SystemClock.elapsedRealtime() + (90 * 1000L)
+            _timerState.update { 
+                it.copy(isRestTimerActive = true, restTimerSeconds = 90)
+            }
         }
     }
 
     fun skipRestTimer() {
-        _uiState.update { it.copy(isRestTimerActive = false, restTimerSeconds = 0) }
+        targetRestEndTime = 0L
+        _timerState.update { it.copy(isRestTimerActive = false, restTimerSeconds = 0) }
     }
 
     fun adjustRestTimer(addSeconds: Int) {
-        _uiState.update { state ->
+        _timerState.update { state ->
             val newTime = (state.restTimerSeconds + addSeconds).coerceAtLeast(0)
+            targetRestEndTime += (addSeconds * 1000L)
+            if (newTime <= 0) {
+                targetRestEndTime = 0L
+            }
             state.copy(
                 restTimerSeconds = newTime,
                 isRestTimerActive = newTime > 0
@@ -238,34 +264,40 @@ class WorkoutSessionManager @Inject constructor(
         timerJob?.cancel()
         timerJob = null
         scope.launch {
-            val state = _uiState.value
-            val workout = Workout(
-                id = UUID.randomUUID().toString(),
-                routineId = state.routineId,
-                name = state.workoutName,
-                durationSeconds = state.workoutDurationSeconds,
-                exercises = state.exercises.map { ex ->
-                    WorkoutExercise(
-                        id = ex.id,
-                        exerciseId = ex.exerciseId,
-                        exerciseName = ex.exerciseName,
-                        sets = ex.sets.map { set ->
-                            WorkoutSet(
-                                id = set.id,
-                                setNumber = set.setNumber,
-                                weight = set.weight.toDoubleOrNull() ?: 0.0,
-                                reps = set.reps.toIntOrNull() ?: 0,
-                                isCompleted = set.isCompleted
-                            )
-                        }
-                    )
-                }
-            )
-            workoutRepository.saveWorkout(workout)
+            val data = _dataState.value
+            val timer = _timerState.value
+            
+            // Jangan simpan latihan jika durasi kurang dari 5 menit (300 detik)
+            if (timer.workoutDurationSeconds >= 300) {
+                val workout = Workout(
+                    id = UUID.randomUUID().toString(),
+                    routineId = data.routineId,
+                    name = data.workoutName,
+                    durationSeconds = timer.workoutDurationSeconds,
+                    exercises = data.exercises.map { ex ->
+                        WorkoutExercise(
+                            id = ex.id,
+                            exerciseId = ex.exerciseId,
+                            exerciseName = ex.exerciseName,
+                            sets = ex.sets.map { set ->
+                                WorkoutSet(
+                                    id = set.id,
+                                    setNumber = set.setNumber,
+                                    weight = set.weight.toDoubleOrNull() ?: 0.0,
+                                    reps = set.reps.toIntOrNull() ?: 0,
+                                    isCompleted = set.isCompleted
+                                )
+                            }
+                        )
+                    }
+                )
+                workoutRepository.saveWorkout(workout)
+            }
             
             _isActive.value = false
             _isPaused.value = false
-            _uiState.value = ActiveWorkoutUiState()
+            _dataState.value = ActiveWorkoutDataState()
+            _timerState.value = ActiveWorkoutTimerState()
             
             onComplete()
         }

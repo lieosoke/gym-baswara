@@ -26,7 +26,7 @@ func main() {
 		exercises.RegisterHandlers(apiV1)
 		routines.RegisterHandlers(apiV1)
 		workouts.RegisterHandlers(apiV1)
-		sync.RegisterHandlers(apiV1)
+		sync.RegisterHandlers(apiV1, nil)
 	}
 
 	log.Println("Starting Gym Baswara backend server on :8080...")

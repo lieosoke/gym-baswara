@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -46,7 +47,8 @@ fun ActiveWorkoutScreen(
     onFinishWorkout: () -> Unit,
     viewModel: ActiveWorkoutViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val dataState by viewModel.dataState.collectAsState()
+    val timerState by viewModel.timerState.collectAsState()
 
     var showExerciseSelection by remember { mutableStateOf(false) }
     
@@ -73,7 +75,7 @@ fun ActiveWorkoutScreen(
             TopAppBar(
                 title = { 
                     Text(
-                        text = uiState.workoutName.ifEmpty { workoutName },
+                        text = dataState.workoutName.ifEmpty { workoutName },
                         fontWeight = FontWeight.Bold
                     ) 
                 },
@@ -84,7 +86,7 @@ fun ActiveWorkoutScreen(
                         modifier = Modifier.padding(end = 16.dp)
                     ) {
                         Text(
-                            text = uiState.formattedWorkoutTimer,
+                            text = timerState.formattedWorkoutTimer,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -110,20 +112,23 @@ fun ActiveWorkoutScreen(
                         .weight(1f),
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
+                    items(
+                        items = dataState.exercises,
+                        key = { it.id }
+                    ) { exercise ->
+                        WorkoutExerciseCard(
+                            exercise = exercise,
+                            onAddSet = { viewModel.addSet(exercise.id) },
+                            onUpdateSet = { setId, weight, reps, isCompleted ->
+                                viewModel.updateSet(exercise.id, setId, weight, reps, isCompleted)
+                            },
+                            onRemoveSet = { setId ->
+                                viewModel.removeSet(exercise.id, setId)
+                            }
+                        )
+                    }
+                    
                     item {
-                        uiState.exercises.forEach { exercise ->
-                            WorkoutExerciseCard(
-                                exercise = exercise,
-                                onAddSet = { viewModel.addSet(exercise.id) },
-                                onUpdateSet = { setId, weight, reps, isCompleted ->
-                                    viewModel.updateSet(exercise.id, setId, weight, reps, isCompleted)
-                                },
-                                onRemoveSet = { setId ->
-                                    viewModel.removeSet(exercise.id, setId)
-                                }
-                            )
-                        }
-                        
                         OutlinedButton(
                             onClick = { showExerciseSelection = true },
                             modifier = Modifier
@@ -163,7 +168,7 @@ fun ActiveWorkoutScreen(
             
             // Rest Timer Overlay
             AnimatedVisibility(
-                visible = uiState.isRestTimerActive,
+                visible = timerState.isRestTimerActive,
                 enter = slideInVertically(initialOffsetY = { it }),
                 exit = slideOutVertically(targetOffsetY = { it }),
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp)
@@ -206,7 +211,7 @@ fun ActiveWorkoutScreen(
                         }
                         
                         Text(
-                            text = uiState.formattedRestTimer,
+                            text = timerState.formattedRestTimer,
                             style = MaterialTheme.typography.displayMedium,
                             color = MaterialTheme.colorScheme.onTertiaryContainer,
                             fontWeight = FontWeight.Bold,
