@@ -29,6 +29,7 @@ data class WorkoutDto(
 data class WorkoutExerciseDto(
     @SerializedName("id") val id: String,
     @SerializedName("exercise_id") val exerciseId: String,
+    @SerializedName("notes") val notes: String?,
     @SerializedName("sets") val sets: List<WorkoutSetDto>
 )
 

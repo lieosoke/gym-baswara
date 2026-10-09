@@ -1,7 +1,9 @@
 package com.gymbaswara.app.feature.workout
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -20,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -39,6 +43,7 @@ fun NewWorkoutScreen(
     
     var showRoutineDialog by remember { mutableStateOf(false) }
     var routineToEdit by remember { mutableStateOf<Routine?>(null) }
+    var isRoutinesExpanded by remember { mutableStateOf(true) }
     
     if (showRoutineDialog) {
         CreateRoutineDialog(
@@ -61,14 +66,13 @@ fun NewWorkoutScreen(
                 title = { 
                     Text(
                         text = "Gym Baswara",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 24.sp,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    actionIconContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
@@ -81,26 +85,19 @@ fun NewWorkoutScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-
 
                 // Routines Section
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Latihan",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                        }
+                        Text(
+                            text = "Latihan",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
 
                         // New Routine Button
                         Button(
@@ -109,7 +106,7 @@ fun NewWorkoutScreen(
                                 showRoutineDialog = true
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(100.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 contentColor = MaterialTheme.colorScheme.onPrimary
@@ -119,13 +116,13 @@ fun NewWorkoutScreen(
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = "New Routine",
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Buat Latihan Baru",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -136,40 +133,76 @@ fun NewWorkoutScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { /* Expand/Collapse */ }
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { isRoutinesExpanded = !isRoutinesExpanded }
+                                .padding(vertical = 8.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.KeyboardArrowDown,
-                                contentDescription = "Expand",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
+                                imageVector = if (isRoutinesExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = if (isRoutinesExpanded) "Tutup daftar" else "Buka daftar",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Latihan Saya (${routines.size})",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onBackground
                             )
                         }
 
-                        if (routines.isEmpty()) {
-                            Text(
-                                text = "Belum ada daftar latihan. Buat latihan baru untuk memulai!",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(vertical = 16.dp)
-                            )
-                        } else {
-                            routines.forEach { routine ->
-                                RoutineCard(
-                                    routine = routine,
-                                    onClick = { onStartTemplate(routine.id) }, // using id instead of name
-                                    onEdit = { 
-                                        routineToEdit = routine
-                                        showRoutineDialog = true
-                                    },
-                                    onDelete = { viewModel.deleteRoutine(routine.id) }
-                                )
+                        AnimatedVisibility(visible = isRoutinesExpanded) {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                if (routines.isEmpty()) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(
+                                                color = MaterialTheme.colorScheme.surface,
+                                                shape = RoundedCornerShape(16.dp)
+                                            )
+                                            .padding(32.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(48.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Text(
+                                            text = "Belum ada daftar latihan",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "Buat rutinitas pertama Anda untuk memulai perjalanan kebugaran.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                } else {
+                                    routines.forEach { routine ->
+                                        RoutineCard(
+                                            routine = routine,
+                                            onClick = { onStartTemplate(routine.id) },
+                                            onEdit = { 
+                                                routineToEdit = routine
+                                                showRoutineDialog = true
+                                            },
+                                            onDelete = { viewModel.deleteRoutine(routine.id) }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -190,15 +223,15 @@ fun RoutineCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(20.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -209,17 +242,18 @@ fun RoutineCard(
                     text = routine.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Box {
                     IconButton(
                         onClick = { expanded = true },
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(48.dp) // Touch target
                     ) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = "Opsi lainnya",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                     DropdownMenu(
@@ -246,28 +280,28 @@ fun RoutineCard(
             
             Spacer(modifier = Modifier.height(4.dp))
             
-            val exerciseString = routine.exercises.joinToString(", ") { it.name }
+            val exerciseString = routine.exercises.joinToString(", ") { it.exercise.name }
             Text(
                 text = exerciseString.ifEmpty { "Belum ada gerakan" },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             
             Button(
                 onClick = onClick,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(100.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurface
                 )
             ) {
                 Text(
                     text = "Buka",
                     modifier = Modifier.padding(vertical = 4.dp),
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -279,7 +313,7 @@ fun RoutineCard(
 fun CreateRoutineDialog(
     initialRoutine: Routine?,
     onDismiss: () -> Unit,
-    onSave: (id: String?, name: String, desc: String?, exercises: List<Exercise>) -> Unit
+    onSave: (id: String?, name: String, desc: String?, exercises: List<com.gymbaswara.app.domain.model.RoutineExercise>) -> Unit
 ) {
     var name by remember { mutableStateOf(initialRoutine?.name ?: "") }
     var description by remember { mutableStateOf(initialRoutine?.description ?: "") }
@@ -298,9 +332,12 @@ fun CreateRoutineDialog(
             if (showExerciseSelection) {
                 ExerciseListScreen(
                     isSelectionMode = true,
-                    initiallySelected = selectedExercises,
-                    onSelectionComplete = { 
-                        selectedExercises = it
+                    initiallySelected = selectedExercises.map { it.exercise },
+                    onSelectionComplete = { newExercises -> 
+                        val existingMap = selectedExercises.associateBy { it.exercise.id }
+                        selectedExercises = newExercises.map { ex ->
+                            com.gymbaswara.app.domain.model.RoutineExercise(exercise = ex, notes = existingMap[ex.id]?.notes)
+                        }
                         showExerciseSelection = false
                     },
                     onCancelSelection = { showExerciseSelection = false }
@@ -376,24 +413,44 @@ fun CreateRoutineDialog(
                                 )
                             }
                         } else {
-                            items(selectedExercises) { exercise ->
-                                Row(
+                            items(selectedExercises) { routineEx ->
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                        .padding(12.dp)
                                 ) {
-                                    Column {
-                                        Text(exercise.name, fontWeight = FontWeight.SemiBold)
-                                        Text(exercise.primaryMuscle ?: "Lainnya", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                    IconButton(
-                                        onClick = { selectedExercises = selectedExercises.filter { it.id != exercise.id } }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Icon(Icons.Default.Close, "Hapus", tint = MaterialTheme.colorScheme.error)
+                                        Column {
+                                            Text(routineEx.exercise.name, fontWeight = FontWeight.SemiBold)
+                                            Text(routineEx.exercise.primaryMuscle ?: "Lainnya", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                        IconButton(
+                                            onClick = { selectedExercises = selectedExercises.filter { it.instanceId != routineEx.instanceId } }
+                                        ) {
+                                            Icon(Icons.Default.Close, "Hapus", tint = MaterialTheme.colorScheme.error)
+                                        }
                                     }
+                                    
+                                    OutlinedTextField(
+                                        value = routineEx.notes ?: "",
+                                        onValueChange = { newNotes ->
+                                            selectedExercises = selectedExercises.map { 
+                                                if (it.instanceId == routineEx.instanceId) it.copy(notes = newNotes) else it 
+                                            }
+                                        },
+                                        placeholder = { Text("Catatan variasi (misal: V-Bar)") },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 8.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        singleLine = true,
+                                        textStyle = MaterialTheme.typography.bodyMedium
+                                    )
                                 }
                             }
                         }

@@ -119,8 +119,9 @@ fun ActiveWorkoutScreen(
                         WorkoutExerciseCard(
                             exercise = exercise,
                             onAddSet = { viewModel.addSet(exercise.id) },
-                            onUpdateSet = { setId, weight, reps, isCompleted ->
-                                viewModel.updateSet(exercise.id, setId, weight, reps, isCompleted)
+                            onUpdateNotes = { viewModel.updateExerciseNotes(exercise.id, it) },
+                            onUpdateSet = { setId, weight, reps, timeSeconds, isCompleted ->
+                                viewModel.updateSet(exercise.id, setId, weight, reps, timeSeconds, isCompleted)
                             },
                             onRemoveSet = { setId ->
                                 viewModel.removeSet(exercise.id, setId)
@@ -261,7 +262,8 @@ fun ActiveWorkoutScreen(
 fun WorkoutExerciseCard(
     exercise: WorkoutExerciseState,
     onAddSet: () -> Unit,
-    onUpdateSet: (setId: String, weight: String?, reps: String?, isCompleted: Boolean?) -> Unit,
+    onUpdateNotes: (String) -> Unit,
+    onUpdateSet: (setId: String, weight: String?, reps: String?, timeSeconds: String?, isCompleted: Boolean?) -> Unit,
     onRemoveSet: (String) -> Unit
 ) {
     ElevatedCard(
@@ -293,7 +295,22 @@ fun WorkoutExerciseCard(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = exercise.notes ?: "",
+                onValueChange = { onUpdateNotes(it) },
+                placeholder = { Text("Tambahkan catatan variasi (misal: Pegangan V-Bar)") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyMedium
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            val isBodyweight = exercise.equipment.equals("Bodyweight", ignoreCase = true)
+            val isStatic = exercise.exerciseName.contains("Plank", ignoreCase = true) || exercise.exerciseName.contains("Hold", ignoreCase = true)
             
             Row(
                 modifier = Modifier
@@ -302,8 +319,14 @@ fun WorkoutExerciseCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("SET", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("KG", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(2f), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("REPS", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(2f), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (!isBodyweight) {
+                    Text("KG", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(2f), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (isStatic) {
+                    Text("WAKTU (dtk)", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(2f), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    Text("REPS", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(2f), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 Text("STATUS", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1.5f), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             
@@ -312,9 +335,12 @@ fun WorkoutExerciseCard(
             exercise.sets.forEach { set ->
                 SetInputRow(
                     set = set,
-                    onWeightChange = { onUpdateSet(set.id, it, null, null) },
-                    onRepsChange = { onUpdateSet(set.id, null, it, null) },
-                    onToggleComplete = { onUpdateSet(set.id, null, null, !set.isCompleted) },
+                    isBodyweight = isBodyweight,
+                    isStatic = isStatic,
+                    onWeightChange = { onUpdateSet(set.id, it, null, null, null) },
+                    onRepsChange = { onUpdateSet(set.id, null, it, null, null) },
+                    onTimeChange = { onUpdateSet(set.id, null, null, it, null) },
+                    onToggleComplete = { onUpdateSet(set.id, null, null, null, !set.isCompleted) },
                     onRemove = { onRemoveSet(set.id) }
                 )
             }
@@ -340,8 +366,11 @@ fun WorkoutExerciseCard(
 @Composable
 fun SetInputRow(
     set: WorkoutSetState,
+    isBodyweight: Boolean,
+    isStatic: Boolean,
     onWeightChange: (String) -> Unit,
     onRepsChange: (String) -> Unit,
+    onTimeChange: (String) -> Unit,
     onToggleComplete: () -> Unit,
     onRemove: () -> Unit
 ) {
@@ -405,39 +434,60 @@ fun SetInputRow(
             )
         }
         
-        OutlinedTextField(
-            value = set.weight,
-            onValueChange = onWeightChange,
-            modifier = Modifier
-                .weight(2f)
-                .padding(horizontal = 6.dp)
-                .height(52.dp),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center, color = textColor),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = textColor,
-                unfocusedTextColor = textColor
+        if (!isBodyweight) {
+            OutlinedTextField(
+                value = set.weight,
+                onValueChange = onWeightChange,
+                modifier = Modifier
+                    .weight(2f)
+                    .padding(horizontal = 6.dp)
+                    .height(52.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center, color = textColor),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = textColor,
+                    unfocusedTextColor = textColor
+                )
             )
-        )
+        }
         
-        OutlinedTextField(
-            value = set.reps,
-            onValueChange = onRepsChange,
-            modifier = Modifier
-                .weight(2f)
-                .padding(horizontal = 6.dp)
-                .height(52.dp),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center, color = textColor),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = textColor,
-                unfocusedTextColor = textColor
+        if (isStatic) {
+            OutlinedTextField(
+                value = set.timeSeconds,
+                onValueChange = onTimeChange,
+                modifier = Modifier
+                    .weight(2f)
+                    .padding(horizontal = 6.dp)
+                    .height(52.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center, color = textColor),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = textColor,
+                    unfocusedTextColor = textColor
+                )
             )
-        )
+        } else {
+            OutlinedTextField(
+                value = set.reps,
+                onValueChange = onRepsChange,
+                modifier = Modifier
+                    .weight(2f)
+                    .padding(horizontal = 6.dp)
+                    .height(52.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center, color = textColor),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = textColor,
+                    unfocusedTextColor = textColor
+                )
+            )
+        }
         
         val buttonColor by animateColorAsState(
             targetValue = if (set.isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,

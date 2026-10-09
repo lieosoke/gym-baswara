@@ -43,12 +43,15 @@ object DatabaseModule {
             GymBaswaraDatabase::class.java,
             "gymbaswara.db"
         )
-        .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_3_5, GymBaswaraDatabase.MIGRATION_5_6)
+        .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_3_5, GymBaswaraDatabase.MIGRATION_5_6, GymBaswaraDatabase.MIGRATION_6_7, GymBaswaraDatabase.MIGRATION_7_8)
         .addCallback(object : RoomDatabase.Callback() {
             override fun onOpen(db: SupportSQLiteDatabase) {
                 super.onOpen(db)
                 CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-                    provider.get().insertExercises(ExerciseSeeder.getInitialExercises(context))
+                    val initialExercises = ExerciseSeeder.getInitialExercises(context)
+                    provider.get().insertExercises(initialExercises)
+                    
+                    provider.get().deduplicateAllExercises()
                 }
             }
         }).build()

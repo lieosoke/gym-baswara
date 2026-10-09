@@ -88,6 +88,7 @@ class WorkoutSessionManager @Inject constructor(
                             setNumber = hs.setNumber,
                             weight = if (hs.weight > 0) weightStr else "",
                             reps = if (hs.reps > 0) hs.reps.toString() else "",
+                            timeSeconds = if ((hs.durationSeconds ?: 0) > 0) hs.durationSeconds.toString() else "",
                             isCompleted = false
                         )
                     }
@@ -161,9 +162,9 @@ class WorkoutSessionManager @Inject constructor(
         _dataState.update { it.copy(workoutName = name) }
     }
 
-    fun addExercise(id: String, name: String) {
+    fun addExercise(id: String, name: String, equipment: String? = null) {
         _dataState.update { state ->
-            val newExercise = WorkoutExerciseState(exerciseId = id, exerciseName = name)
+            val newExercise = WorkoutExerciseState(exerciseId = id, exerciseName = name, equipment = equipment)
             state.copy(exercises = state.exercises + newExercise)
         }
         loadHistoryForExercises()
@@ -176,6 +177,20 @@ class WorkoutSessionManager @Inject constructor(
                     if (exercise.id == exerciseId) {
                         val newSetNumber = exercise.sets.size + 1
                         exercise.copy(sets = exercise.sets + WorkoutSetState(setNumber = newSetNumber))
+                    } else {
+                        exercise
+                    }
+                }
+            )
+        }
+    }
+
+    fun updateExerciseNotes(exerciseId: String, notes: String) {
+        _dataState.update { state ->
+            state.copy(
+                exercises = state.exercises.map { exercise ->
+                    if (exercise.id == exerciseId) {
+                        exercise.copy(notes = notes)
                     } else {
                         exercise
                     }
@@ -200,7 +215,7 @@ class WorkoutSessionManager @Inject constructor(
         }
     }
 
-    fun updateSet(exerciseId: String, setId: String, weight: String? = null, reps: String? = null, isCompleted: Boolean? = null) {
+    fun updateSet(exerciseId: String, setId: String, weight: String? = null, reps: String? = null, timeSeconds: String? = null, isCompleted: Boolean? = null) {
         var shouldStartRest = false
         _dataState.update { state ->
             val newExercises = state.exercises.map { exercise ->
@@ -218,6 +233,7 @@ class WorkoutSessionManager @Inject constructor(
                                 set.copy(
                                     weight = weight ?: set.weight,
                                     reps = reps ?: set.reps,
+                                    timeSeconds = timeSeconds ?: set.timeSeconds,
                                     isCompleted = nowCompleted
                                 )
                             } else {
@@ -275,16 +291,21 @@ class WorkoutSessionManager @Inject constructor(
                     name = data.workoutName,
                     durationSeconds = timer.workoutDurationSeconds,
                     exercises = data.exercises.map { ex ->
+                        val isBodyweight = ex.equipment.equals("Bodyweight", ignoreCase = true)
+                        val isStatic = ex.exerciseName.contains("Plank", ignoreCase = true) || ex.exerciseName.contains("Hold", ignoreCase = true)
+                        
                         WorkoutExercise(
                             id = ex.id,
                             exerciseId = ex.exerciseId,
                             exerciseName = ex.exerciseName,
+                            notes = ex.notes,
                             sets = ex.sets.map { set ->
                                 WorkoutSet(
                                     id = set.id,
                                     setNumber = set.setNumber,
-                                    weight = set.weight.toDoubleOrNull() ?: 0.0,
-                                    reps = set.reps.toIntOrNull() ?: 0,
+                                    weight = if (isBodyweight) 0.0 else (set.weight.toDoubleOrNull() ?: 0.0),
+                                    reps = if (isStatic) 0 else (set.reps.toIntOrNull() ?: 0),
+                                    durationSeconds = if (isStatic) (set.timeSeconds.toIntOrNull() ?: 0) else null,
                                     isCompleted = set.isCompleted
                                 )
                             }

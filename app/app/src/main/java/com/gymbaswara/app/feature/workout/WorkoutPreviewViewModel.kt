@@ -34,6 +34,8 @@ class WorkoutPreviewViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(WorkoutPreviewUiState())
     val uiState: StateFlow<WorkoutPreviewUiState> = _uiState.asStateFlow()
 
+    val isWorkoutActive: StateFlow<Boolean> = sessionManager.isActive
+
     init {
         if (!routineId.isNullOrBlank()) {
             loadRoutine(routineId)
@@ -45,10 +47,14 @@ class WorkoutPreviewViewModel @Inject constructor(
             val routine = routineRepository.getRoutineById(id).firstOrNull()
             if (routine != null) {
                 originalRoutine = routine
-                val routineExercises = routine.exercises.map { exercise ->
+                val routineExercises = routine.exercises.map { routineEx ->
+                    val exercise = routineEx.exercise
                     WorkoutExerciseState(
+                        id = routineEx.instanceId,
                         exerciseId = exercise.id,
                         exerciseName = exercise.name,
+                        equipment = exercise.equipment,
+                        notes = routineEx.notes,
                         lastPerformance = "Belum ada riwayat",
                         sets = listOf(WorkoutSetState(setNumber = 1))
                     )
@@ -81,6 +87,14 @@ class WorkoutPreviewViewModel @Inject constructor(
         }
     }
 
+    fun updateExerciseNotes(id: String, notes: String) {
+        _uiState.update { state ->
+            state.copy(exercises = state.exercises.map { 
+                if (it.id == id) it.copy(notes = notes) else it 
+            })
+        }
+    }
+
     fun moveExerciseUp(index: Int) {
         if (index > 0) {
             _uiState.update { state ->
@@ -109,7 +123,7 @@ class WorkoutPreviewViewModel @Inject constructor(
             // Create placeholder Exercise objects since RoutineRepositoryImpl 
             // only requires exercise.id to recreate the cross-references.
             val updatedExercises = state.exercises.map { ex ->
-                Exercise(
+                val exercise = Exercise(
                     id = ex.exerciseId,
                     name = ex.exerciseName,
                     description = null,
@@ -120,6 +134,11 @@ class WorkoutPreviewViewModel @Inject constructor(
                     instructions = null,
                     imageUrl = null,
                     isSystem = false
+                )
+                com.gymbaswara.app.domain.model.RoutineExercise(
+                    instanceId = ex.id,
+                    exercise = exercise, 
+                    notes = ex.notes
                 )
             }
             
@@ -152,6 +171,12 @@ class WorkoutPreviewViewModel @Inject constructor(
         ContextCompat.startForegroundService(context, serviceIntent)
 
         onSuccess()
+    }
+
+    fun forceStartNewWorkout(onSuccess: () -> Unit) {
+        sessionManager.finishWorkout {
+            startWorkout(onSuccess)
+        }
     }
 }
 

@@ -29,6 +29,7 @@ data class WorkoutSetState(
     val setNumber: Int,
     val weight: String = "",
     val reps: String = "",
+    val timeSeconds: String = "",
     val isCompleted: Boolean = false
 )
 
@@ -36,6 +37,8 @@ data class WorkoutExerciseState(
     val id: String = UUID.randomUUID().toString(),
     val exerciseId: String,
     val exerciseName: String,
+    val equipment: String? = null,
+    val notes: String? = null,
     val lastPerformance: String = "Belum ada riwayat",
     val sets: List<WorkoutSetState> = listOf(WorkoutSetState(setNumber = 1))
 )
@@ -82,11 +85,12 @@ class ActiveWorkoutViewModel @Inject constructor(
     val isPaused: StateFlow<Boolean> = sessionManager.isPaused
 
     fun updateWorkoutName(name: String) = sessionManager.updateWorkoutName(name)
-    fun addExercise(id: String, name: String) = sessionManager.addExercise(id, name)
+    fun addExercise(id: String, name: String, equipment: String? = null) = sessionManager.addExercise(id, name, equipment)
     fun addSet(exerciseId: String) = sessionManager.addSet(exerciseId)
     fun removeSet(exerciseId: String, setId: String) = sessionManager.removeSet(exerciseId, setId)
-    fun updateSet(exerciseId: String, setId: String, weight: String? = null, reps: String? = null, isCompleted: Boolean? = null) = 
-        sessionManager.updateSet(exerciseId, setId, weight, reps, isCompleted)
+    fun updateSet(exerciseId: String, setId: String, weight: String? = null, reps: String? = null, timeSeconds: String? = null, isCompleted: Boolean? = null) = 
+        sessionManager.updateSet(exerciseId, setId, weight, reps, timeSeconds, isCompleted)
+    fun updateExerciseNotes(exerciseId: String, notes: String) = sessionManager.updateExerciseNotes(exerciseId, notes)
     fun skipRestTimer() = sessionManager.skipRestTimer()
     fun adjustRestTimer(addSeconds: Int) = sessionManager.adjustRestTimer(addSeconds)
     fun finishWorkout(onComplete: () -> Unit) = sessionManager.finishWorkout(onComplete)

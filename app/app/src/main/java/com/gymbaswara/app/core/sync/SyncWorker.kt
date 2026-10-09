@@ -42,6 +42,7 @@ class SyncWorker @AssistedInject constructor(
                         WorkoutExerciseDto(
                             id = exerciseWithSets.exercise.id,
                             exerciseId = exerciseWithSets.exercise.exerciseId,
+                            notes = exerciseWithSets.exercise.notes,
                             sets = exerciseWithSets.sets.map { set ->
                                 WorkoutSetDto(
                                     id = set.id,

@@ -9,5 +9,6 @@ data class WorkoutExerciseEntity(
     val workoutId: String,
     val exerciseId: String,
     val orderIndex: Int,
-    val supersetId: String?
+    val supersetId: String?,
+    val notes: String? = null
 )

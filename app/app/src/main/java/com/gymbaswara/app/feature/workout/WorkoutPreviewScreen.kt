@@ -29,8 +29,33 @@ fun WorkoutPreviewScreen(
     viewModel: WorkoutPreviewViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isWorkoutActive by viewModel.isWorkoutActive.collectAsState()
     var showExerciseSelection by remember { mutableStateOf(false) }
+    var showOverrideDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    if (showOverrideDialog) {
+        AlertDialog(
+            onDismissRequest = { showOverrideDialog = false },
+            title = { Text("Peringatan") },
+            text = { Text("Ada sesi latihan yang sedang berjalan di latar belakang. Apakah Anda ingin mengakhiri sesi tersebut dan memulai sesi yang baru?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showOverrideDialog = false
+                        viewModel.forceStartNewWorkout(onStartWorkout)
+                    }
+                ) {
+                    Text("Mulai Baru", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showOverrideDialog = false }) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
 
     if (showExerciseSelection) {
         ExerciseListScreen(
@@ -78,7 +103,13 @@ fun WorkoutPreviewScreen(
             ) {
                 PaddingValues(16.dp).let {
                     Button(
-                        onClick = { viewModel.startWorkout(onStartWorkout) },
+                        onClick = { 
+                            if (isWorkoutActive) {
+                                showOverrideDialog = true
+                            } else {
+                                viewModel.startWorkout(onStartWorkout)
+                            }
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
@@ -184,6 +215,17 @@ fun WorkoutPreviewScreen(
                                 }
                             }
                         }
+                        OutlinedTextField(
+                            value = exercise.notes ?: "",
+                            onValueChange = { viewModel.updateExerciseNotes(exercise.id, it) },
+                            placeholder = { Text("Catatan variasi (misal: Pegangan V-Bar)") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium
+                        )
                     }
                 }
             }

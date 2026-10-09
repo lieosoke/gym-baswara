@@ -45,7 +45,8 @@ class WorkoutRepositoryImpl @Inject constructor(
                 workoutId = workout.id,
                 exerciseId = ex.exerciseId,
                 orderIndex = index,
-                supersetId = null
+                supersetId = null,
+                notes = ex.notes
             )
         }
 
@@ -58,7 +59,7 @@ class WorkoutRepositoryImpl @Inject constructor(
                     setType = "normal",
                     weight = set.weight,
                     reps = set.reps,
-                    durationSeconds = null,
+                    durationSeconds = set.durationSeconds,
                     distance = null,
                     rpe = null,
                     rir = null,

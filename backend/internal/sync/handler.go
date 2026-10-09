@@ -13,6 +13,7 @@ import (
 type WorkoutExerciseDto struct {
 	ID         string          `json:"id" bson:"_id"`
 	ExerciseID string          `json:"exercise_id" bson:"exercise_id"`
+	Notes      string          `json:"notes" bson:"notes"`
 	Sets       []WorkoutSetDto `json:"sets" bson:"sets"`
 }
 

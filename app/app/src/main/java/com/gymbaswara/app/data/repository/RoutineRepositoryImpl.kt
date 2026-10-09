@@ -17,19 +17,28 @@ class RoutineRepositoryImpl @Inject constructor(
 
     override fun getAllRoutines(): Flow<List<Routine>> {
         return routineDao.getAllRoutines().combine(routineDao.getAllCrossRefs()) { routinesWithExercises, crossRefs ->
-            val orderMap = crossRefs.groupBy { it.routineId }
-                .mapValues { entry -> entry.value.associate { it.exerciseId to it.orderIndex } }
+            val crossRefsByRoutine = crossRefs.groupBy { it.routineId }
 
             routinesWithExercises.map { routineWithEx ->
-                val routineOrders = orderMap[routineWithEx.routine.id] ?: emptyMap()
-                val sortedExercises = routineWithEx.exercises.sortedBy { routineOrders[it.id] ?: Int.MAX_VALUE }
+                val routineRefs = crossRefsByRoutine[routineWithEx.routine.id] ?: emptyList()
+                val sortedRefs = routineRefs.sortedBy { it.orderIndex }
+                val exercises = sortedRefs.mapNotNull { ref ->
+                    val exEntity = routineWithEx.exercises.find { it.id == ref.exerciseId }
+                    if (exEntity != null) {
+                        com.gymbaswara.app.domain.model.RoutineExercise(
+                            instanceId = ref.id,
+                            exercise = exEntity.toDomain(),
+                            notes = ref.notes
+                        )
+                    } else null
+                }
                 Routine(
                     id = routineWithEx.routine.id,
                     name = routineWithEx.routine.name,
                     description = routineWithEx.routine.description,
                     createdAt = routineWithEx.routine.createdAt,
                     updatedAt = routineWithEx.routine.updatedAt,
-                    exercises = sortedExercises.map { it.toDomain() }
+                    exercises = exercises
                 )
             }
         }
@@ -38,15 +47,24 @@ class RoutineRepositoryImpl @Inject constructor(
     override fun getRoutineById(id: String): Flow<Routine?> {
         return routineDao.getRoutineById(id).combine(routineDao.getCrossRefsByRoutineId(id)) { routineWithEx, crossRefs ->
             routineWithEx?.let {
-                val orderMap = crossRefs.associate { it.exerciseId to it.orderIndex }
-                val sortedExercises = it.exercises.sortedBy { ex -> orderMap[ex.id] ?: Int.MAX_VALUE }
+                val sortedRefs = crossRefs.sortedBy { it.orderIndex }
+                val exercises = sortedRefs.mapNotNull { ref ->
+                    val exEntity = it.exercises.find { entity -> entity.id == ref.exerciseId }
+                    if (exEntity != null) {
+                        com.gymbaswara.app.domain.model.RoutineExercise(
+                            instanceId = ref.id,
+                            exercise = exEntity.toDomain(),
+                            notes = ref.notes
+                        )
+                    } else null
+                }
                 Routine(
                     id = it.routine.id,
                     name = it.routine.name,
                     description = it.routine.description,
                     createdAt = it.routine.createdAt,
                     updatedAt = it.routine.updatedAt,
-                    exercises = sortedExercises.map { ex -> ex.toDomain() }
+                    exercises = exercises
                 )
             }
         }
@@ -60,11 +78,13 @@ class RoutineRepositoryImpl @Inject constructor(
             createdAt = routine.createdAt,
             updatedAt = routine.updatedAt
         )
-        val crossRefs = routine.exercises.mapIndexed { index, exercise ->
+        val crossRefs = routine.exercises.mapIndexed { index, routineEx ->
             RoutineExerciseCrossRef(
+                id = routineEx.instanceId,
                 routineId = routine.id,
-                exerciseId = exercise.id,
-                orderIndex = index
+                exerciseId = routineEx.exercise.id,
+                orderIndex = index,
+                notes = routineEx.notes
             )
         }
         routineDao.insertRoutineWithExercises(routineEntity, crossRefs)

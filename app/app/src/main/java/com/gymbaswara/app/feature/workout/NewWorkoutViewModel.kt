@@ -26,7 +26,7 @@ class NewWorkoutViewModel @Inject constructor(
     val allExercises: StateFlow<List<Exercise>> = exerciseRepository.getExercises()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun saveRoutine(id: String?, name: String, description: String?, selectedExercises: List<Exercise>) {
+    fun saveRoutine(id: String?, name: String, description: String?, selectedExercises: List<com.gymbaswara.app.domain.model.RoutineExercise>) {
         if (name.isBlank() || selectedExercises.isEmpty()) return
 
         val routine = Routine(

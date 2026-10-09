@@ -12,6 +12,7 @@ data class WorkoutExercise(
     val id: String,
     val exerciseId: String,
     val exerciseName: String,
+    val notes: String? = null,
     val sets: List<WorkoutSet>
 )
 
@@ -20,5 +21,6 @@ data class WorkoutSet(
     val setNumber: Int,
     val weight: Double,
     val reps: Int,
+    val durationSeconds: Int? = null,
     val isCompleted: Boolean
 )
