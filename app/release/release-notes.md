@@ -1,21 +1,22 @@
-Version: 1.1.2
-versionCode: 4
+Version: 1.2.0
+versionCode: 5
 
-Previous Version: 1.1.1
-New Version: 1.1.2
+Previous Version: 1.1.2
+New Version: 1.2.0
 
 Changes:
-- HOTFIX: Fixed a critical database cascade deletion bug that caused custom routine exercises to disappear upon app restart.
+- Added Background Workout Controls: implemented foreground service to keep active workout running in the background.
 
 Bug Fixes:
-- Fixed `OnConflictStrategy.REPLACE` in `ExerciseDao` which triggered `ON DELETE CASCADE` on `RoutineExerciseCrossRef`.
+- N/A
 
 Database Changes:
-- Validasi Room schema version 5
-- No structural changes in this release.
+- Added `syncStatus` column to `workouts` table.
+- Database version updated to 6.
 
 Migration:
-- Tested existing migrations (v3 -> v4, v4 -> v5, v3 -> v5).
+- Added migration script from v5 to v6.
 
 Data Safety:
-- Routine data is now 100% persistent across app restarts and updates.
+- Existing user data preserved.
+- Validated offline storage for active workouts.
