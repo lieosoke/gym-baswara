@@ -30,7 +30,7 @@ class ActiveWorkoutService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     
-    private val channelId = "active_workout_channel"
+    private val channelId = "active_workout_channel_v2"
     private val notificationId = 1
 
     companion object {
@@ -161,6 +161,7 @@ class ActiveWorkoutService : Service() {
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
         if (timerState.isRestTimerActive) {
             val skipRestActionIntent = Intent(this, ActiveWorkoutService::class.java).apply {
@@ -188,9 +189,9 @@ class ActiveWorkoutService : Service() {
             val channel = NotificationChannel(
                 channelId,
                 "Latihan Aktif",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "Menampilkan durasi latihan yang sedang berjalan"
+                description = "Menampilkan durasi latihan yang sedang berjalan di lockscreen"
             }
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)

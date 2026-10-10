@@ -68,6 +68,12 @@ fun ActiveWorkoutScreen(
         }
     }
 
+    val isPipMode by MainActivity.isInPipMode.collectAsState()
+    if (isPipMode) {
+        PipWorkoutScreen(dataState, timerState)
+        return
+    }
+
     var showExerciseSelection by remember { mutableStateOf(false) }
     
     if (showExerciseSelection) {
@@ -272,6 +278,64 @@ fun ActiveWorkoutScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun PipWorkoutScreen(dataState: ActiveWorkoutDataState, timerState: ActiveWorkoutTimerState) {
+    var currentExerciseName = "Semua Selesai"
+    var currentSetNumber = ""
+    
+    val activeExercise = dataState.exercises.find { ex -> ex.sets.any { !it.isCompleted } }
+    if (activeExercise != null) {
+        currentExerciseName = activeExercise.exerciseName
+        val activeSet = activeExercise.sets.find { !it.isCompleted }
+        if (activeSet != null) {
+            currentSetNumber = "• Set ${activeSet.setNumber}"
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF121212)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = timerState.formattedWorkoutTimer,
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            )
+            
+            if (timerState.isRestTimerActive) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "⏳ " + timerState.formattedRestTimer,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFFB74D) // Orange for rest timer
+                    )
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "$currentExerciseName $currentSetNumber",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    color = Color.LightGray,
+                    fontWeight = FontWeight.Medium
+                ),
+                textAlign = TextAlign.Center,
+                maxLines = 2
+            )
         }
     }
 }
