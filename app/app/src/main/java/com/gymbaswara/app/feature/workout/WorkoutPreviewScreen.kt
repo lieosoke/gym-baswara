@@ -215,17 +215,25 @@ fun WorkoutPreviewScreen(
                                 }
                             }
                         }
-                        OutlinedTextField(
-                            value = exercise.notes ?: "",
-                            onValueChange = { viewModel.updateExerciseNotes(exercise.id, it) },
-                            placeholder = { Text("Catatan variasi (misal: Pegangan V-Bar)") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyMedium
-                        )
+                        if (exercise.notes == null) {
+                            TextButton(
+                                onClick = { viewModel.updateExerciseNotes(exercise.id, "") },
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            ) {
+                                Text("+ Tambah Catatan")
+                            }
+                        } else {
+                            OutlinedTextField(
+                                value = exercise.notes,
+                                onValueChange = { viewModel.updateExerciseNotes(exercise.id, it) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.bodyMedium
+                            )
+                        }
                     }
                 }
             }

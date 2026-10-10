@@ -26,4 +26,16 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    companion object {
+        var isWorkoutActiveGlobal = false
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (isWorkoutActiveGlobal) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build())
+            }
+        }
+    }
 }

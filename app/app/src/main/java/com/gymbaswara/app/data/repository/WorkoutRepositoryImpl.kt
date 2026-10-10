@@ -119,4 +119,8 @@ class WorkoutRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    override fun getExercisedIds(): kotlinx.coroutines.flow.Flow<List<String>> {
+        return workoutDao.getExercisedIds()
+    }
 }

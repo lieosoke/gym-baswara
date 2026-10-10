@@ -86,4 +86,7 @@ interface WorkoutDao {
         ORDER BY w.startedAt ASC
     """)
     fun getPRProgression(exerciseId: String): Flow<List<PRDataPoint>>
+
+    @Query("SELECT DISTINCT we.exerciseId FROM workout_exercises we INNER JOIN workouts w ON we.workoutId = w.id WHERE w.status = 'completed'")
+    fun getExercisedIds(): Flow<List<String>>
 }

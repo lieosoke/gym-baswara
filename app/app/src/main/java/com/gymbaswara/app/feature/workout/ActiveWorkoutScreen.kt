@@ -40,6 +40,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 
+import android.app.Activity
+import android.view.WindowManager
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
+import com.gymbaswara.app.MainActivity
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActiveWorkoutScreen(
@@ -49,6 +55,18 @@ fun ActiveWorkoutScreen(
 ) {
     val dataState by viewModel.dataState.collectAsState()
     val timerState by viewModel.timerState.collectAsState()
+
+    val context = LocalContext.current
+    DisposableEffect(Unit) {
+        val activity = context as? Activity
+        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        MainActivity.isWorkoutActiveGlobal = true
+        
+        onDispose {
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            MainActivity.isWorkoutActiveGlobal = false
+        }
+    }
 
     var showExerciseSelection by remember { mutableStateOf(false) }
     
@@ -295,17 +313,25 @@ fun WorkoutExerciseCard(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
             
-            OutlinedTextField(
-                value = exercise.notes ?: "",
-                onValueChange = { onUpdateNotes(it) },
-                placeholder = { Text("Tambahkan catatan variasi (misal: Pegangan V-Bar)") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium
-            )
+            if (exercise.notes == null) {
+                TextButton(
+                    onClick = { onUpdateNotes("") },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    Text("+ Tambah Catatan")
+                }
+            } else {
+                OutlinedTextField(
+                    value = exercise.notes,
+                    onValueChange = { onUpdateNotes(it) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium
+                )
+            }
             
             Spacer(modifier = Modifier.height(8.dp))
             

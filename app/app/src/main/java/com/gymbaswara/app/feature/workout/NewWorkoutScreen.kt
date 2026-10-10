@@ -444,21 +444,33 @@ fun CreateRoutineDialog(
                                         }
                                     }
                                     
-                                    OutlinedTextField(
-                                        value = routineEx.notes ?: "",
-                                        onValueChange = { newNotes ->
-                                            selectedExercises = selectedExercises.map { 
-                                                if (it.instanceId == routineEx.instanceId) it.copy(notes = newNotes) else it 
-                                            }
-                                        },
-                                        placeholder = { Text("Catatan variasi (misal: V-Bar)") },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = 8.dp),
-                                        shape = RoundedCornerShape(8.dp),
-                                        singleLine = true,
-                                        textStyle = MaterialTheme.typography.bodyMedium
-                                    )
+                                    if (routineEx.notes == null) {
+                                        TextButton(
+                                            onClick = {
+                                                selectedExercises = selectedExercises.map {
+                                                    if (it.instanceId == routineEx.instanceId) it.copy(notes = "") else it
+                                                }
+                                            },
+                                            modifier = Modifier.padding(top = 8.dp)
+                                        ) {
+                                            Text("+ Tambah Catatan")
+                                        }
+                                    } else {
+                                        OutlinedTextField(
+                                            value = routineEx.notes ?: "",
+                                            onValueChange = { newNotes ->
+                                                selectedExercises = selectedExercises.map { 
+                                                    if (it.instanceId == routineEx.instanceId) it.copy(notes = newNotes) else it 
+                                                }
+                                            },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 8.dp),
+                                            shape = RoundedCornerShape(8.dp),
+                                            singleLine = true,
+                                            textStyle = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
                                 }
                             }
                         }
