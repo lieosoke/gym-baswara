@@ -3,15 +3,11 @@ package com.gymbaswara.app.data.repository
 import kotlinx.coroutines.flow.map
 
 import android.content.Context
-import androidx.work.Constraints
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
 import com.gymbaswara.app.core.database.dao.WorkoutDao
 import com.gymbaswara.app.core.database.entity.WorkoutEntity
 import com.gymbaswara.app.core.database.entity.WorkoutExerciseEntity
 import com.gymbaswara.app.core.database.entity.WorkoutSetEntity
-import com.gymbaswara.app.core.sync.SyncWorker
+import com.gymbaswara.app.core.sync.SyncScheduler
 import com.gymbaswara.app.domain.model.Workout
 import com.gymbaswara.app.domain.model.WorkoutSet
 import com.gymbaswara.app.domain.repository.WorkoutRepository
@@ -24,19 +20,20 @@ class WorkoutRepositoryImpl @Inject constructor(
 ) : WorkoutRepository {
 
     override suspend fun saveWorkout(workout: Workout) {
+        val now = System.currentTimeMillis()
         val workoutEntity = WorkoutEntity(
             id = workout.id,
             userId = "user_1",
             routineId = workout.routineId,
             routineDayId = null,
             name = workout.name,
-            startedAt = System.currentTimeMillis() - (workout.durationSeconds * 1000L),
-            completedAt = System.currentTimeMillis(),
+            startedAt = if (workout.startedAtMillis > 0) workout.startedAtMillis else now - (workout.durationSeconds * 1000L),
+            completedAt = now,
             durationSeconds = workout.durationSeconds,
             totalVolume = workout.exercises.flatMap { it.sets }.filter { it.isCompleted }.sumOf { it.weight * it.reps },
             status = "completed",
-            createdAt = System.currentTimeMillis(),
-            updatedAt = System.currentTimeMillis()
+            createdAt = now,
+            updatedAt = now
         )
 
         val exerciseEntities = workout.exercises.mapIndexed { index, ex ->
@@ -71,15 +68,7 @@ class WorkoutRepositoryImpl @Inject constructor(
 
         workoutDao.insertWorkoutWithDetails(workoutEntity, exerciseEntities, setEntities)
 
-        // Trigger background sync
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-            
-        val syncWorkRequest = OneTimeWorkRequestBuilder<SyncWorker>()
-            .setConstraints(constraints)
-            .build()
-        WorkManager.getInstance(context).enqueue(syncWorkRequest)
+        SyncScheduler.enqueue(context)
     }
 
     override suspend fun getLastPerformance(exerciseId: String): String? {

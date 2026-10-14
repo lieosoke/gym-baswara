@@ -22,6 +22,13 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    private const val DB_META_PREFS = "gymbaswara_db_meta"
+    private const val KEY_EXERCISE_SEED_VERSION = "exercise_seed_version"
+
+    // Bump this whenever assets/exercises.json changes so existing installs pick up
+    // the new exercises exactly once instead of re-seeding on every database open.
+    private const val EXERCISE_SEED_VERSION = 1
+
     @Provides
     @Singleton
     fun provideDatabase(
@@ -38,21 +45,44 @@ object DatabaseModule {
             override fun migrate(db: SupportSQLiteDatabase) {}
         }
 
+        val seedScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val seedPrefs = context.getSharedPreferences(DB_META_PREFS, Context.MODE_PRIVATE)
+        val seeding = java.util.concurrent.atomic.AtomicBoolean(false)
+
+        // Seeding and de-duplication are idempotent, but they are I/O and write heavy.
+        // Run them only when the seed version changes (first install or exercise update),
+        // never on every database open.
+        fun ensureExercisesSeeded() {
+            if (seedPrefs.getInt(KEY_EXERCISE_SEED_VERSION, 0) == EXERCISE_SEED_VERSION) return
+            if (!seeding.compareAndSet(false, true)) return
+            seedScope.launch {
+                try {
+                    provider.get().insertExercises(ExerciseSeeder.getInitialExercises(context))
+                    provider.get().deduplicateAllExercises()
+                    seedPrefs.edit()
+                        .putInt(KEY_EXERCISE_SEED_VERSION, EXERCISE_SEED_VERSION)
+                        .apply()
+                } finally {
+                    seeding.set(false)
+                }
+            }
+        }
+
         return Room.databaseBuilder(
             context,
             GymBaswaraDatabase::class.java,
             "gymbaswara.db"
         )
-        .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_3_5, GymBaswaraDatabase.MIGRATION_5_6, GymBaswaraDatabase.MIGRATION_6_7, GymBaswaraDatabase.MIGRATION_7_8)
+        .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_3_5, GymBaswaraDatabase.MIGRATION_5_6, GymBaswaraDatabase.MIGRATION_6_7, GymBaswaraDatabase.MIGRATION_7_8, GymBaswaraDatabase.MIGRATION_8_9, GymBaswaraDatabase.MIGRATION_9_10)
         .addCallback(object : RoomDatabase.Callback() {
+            override fun onCreate(db: SupportSQLiteDatabase) {
+                super.onCreate(db)
+                ensureExercisesSeeded()
+            }
+
             override fun onOpen(db: SupportSQLiteDatabase) {
                 super.onOpen(db)
-                CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-                    val initialExercises = ExerciseSeeder.getInitialExercises(context)
-                    provider.get().insertExercises(initialExercises)
-                    
-                    provider.get().deduplicateAllExercises()
-                }
+                ensureExercisesSeeded()
             }
         }).build()
     }
@@ -70,5 +100,10 @@ object DatabaseModule {
     @Provides
     fun provideRoutineDao(database: GymBaswaraDatabase): com.gymbaswara.app.core.database.dao.RoutineDao {
         return database.routineDao()
+    }
+
+    @Provides
+    fun provideBodyMetricDao(database: GymBaswaraDatabase): com.gymbaswara.app.core.database.dao.BodyMetricDao {
+        return database.bodyMetricDao()
     }
 }

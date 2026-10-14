@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 @Composable
-fun SplashScreen(onNavigateToHome: () -> Unit) {
+fun SplashScreen(isLoggedIn: Boolean, onFinished: (Boolean) -> Unit) {
     val scale = remember { Animatable(0f) }
     val alpha = remember { Animatable(0f) }
 
@@ -37,7 +37,7 @@ fun SplashScreen(onNavigateToHome: () -> Unit) {
             )
         )
         delay(500)
-        onNavigateToHome()
+        onFinished(isLoggedIn)
     }
 
     Box(

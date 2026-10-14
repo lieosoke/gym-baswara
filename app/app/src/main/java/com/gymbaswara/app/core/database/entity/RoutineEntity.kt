@@ -9,5 +9,6 @@ data class RoutineEntity(
     val name: String,
     val description: String?,
     val createdAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val syncStatus: String = "PENDING"
 )

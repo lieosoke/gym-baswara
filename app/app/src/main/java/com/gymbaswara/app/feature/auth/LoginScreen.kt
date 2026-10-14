@@ -15,15 +15,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-    onLoginSuccess: () -> Unit,
-    onNavigateToRegister: () -> Unit
+    onAuthenticated: () -> Unit,
+    onNavigateToRegister: () -> Unit,
+    viewModel: AuthViewModel = hiltViewModel()
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    val state by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(state.isSuccess) {
+        if (state.isSuccess) onAuthenticated()
+    }
 
     Box(
         modifier = Modifier
@@ -42,9 +49,9 @@ fun LoginScreen(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             Text(
                 text = "Siap memecahkan rekor hari ini?",
                 style = MaterialTheme.typography.bodyLarge,
@@ -59,6 +66,7 @@ fun LoginScreen(
                 label = { Text("Email") },
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -76,6 +84,7 @@ fun LoginScreen(
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -84,26 +93,45 @@ fun LoginScreen(
                 )
             )
 
+            if (state.error != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = state.error.orEmpty(),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                onClick = onLoginSuccess,
+                onClick = { viewModel.login(email, password) },
+                enabled = !state.isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp), // Tap target minimal 48dp sesuai antislop-layoutmobile
+                    .height(56.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
-                Text(
-                    text = "MASUK",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                if (state.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text(
+                        text = "MASUK",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             TextButton(
-                onClick = onNavigateToRegister
+                onClick = onNavigateToRegister,
+                enabled = !state.isLoading
             ) {
                 Text(
                     text = "Belum punya akun? Daftar di sini",

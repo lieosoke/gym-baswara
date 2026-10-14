@@ -44,6 +44,7 @@ class WorkoutSessionManager @Inject constructor(
 
     private var timerJob: Job? = null
     private var workoutStartTime: Long = 0L
+    private var workoutStartWallClock: Long = 0L
     private var totalPausedDurationMillis: Long = 0L
     private var pauseStartTime: Long = 0L
     private var targetRestEndTime: Long = 0L
@@ -67,6 +68,7 @@ class WorkoutSessionManager @Inject constructor(
         )
         
         workoutStartTime = SystemClock.elapsedRealtime()
+        workoutStartWallClock = System.currentTimeMillis()
         totalPausedDurationMillis = 0L
         targetRestEndTime = 0L
         
@@ -290,6 +292,7 @@ class WorkoutSessionManager @Inject constructor(
                     routineId = data.routineId,
                     name = data.workoutName,
                     durationSeconds = timer.workoutDurationSeconds,
+                    startedAtMillis = workoutStartWallClock,
                     exercises = data.exercises.map { ex ->
                         val isBodyweight = ex.equipment.equals("Bodyweight", ignoreCase = true)
                         val isStatic = ex.exerciseName.contains("Plank", ignoreCase = true) || ex.exerciseName.contains("Hold", ignoreCase = true)

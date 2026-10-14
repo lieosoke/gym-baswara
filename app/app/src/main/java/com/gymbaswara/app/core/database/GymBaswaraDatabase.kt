@@ -6,6 +6,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.gymbaswara.app.core.database.dao.ExerciseDao
 import com.gymbaswara.app.core.database.dao.WorkoutDao
+import com.gymbaswara.app.core.database.entity.BodyMetricEntity
 import com.gymbaswara.app.core.database.entity.ExerciseEntity
 import com.gymbaswara.app.core.database.entity.WorkoutEntity
 import com.gymbaswara.app.core.database.entity.WorkoutExerciseEntity
@@ -20,15 +21,17 @@ import com.gymbaswara.app.core.database.entity.RoutineExerciseCrossRef
         WorkoutExerciseEntity::class,
         WorkoutSetEntity::class,
         RoutineEntity::class,
-        RoutineExerciseCrossRef::class
+        RoutineExerciseCrossRef::class,
+        BodyMetricEntity::class
     ],
-    version = 8,
+    version = 10,
     exportSchema = false
 )
 abstract class GymBaswaraDatabase : RoomDatabase() {
     abstract fun exerciseDao(): ExerciseDao
     abstract fun workoutDao(): WorkoutDao
     abstract fun routineDao(): com.gymbaswara.app.core.database.dao.RoutineDao
+    abstract fun bodyMetricDao(): com.gymbaswara.app.core.database.dao.BodyMetricDao
     
     companion object {
         val MIGRATION_5_6 = object : Migration(5, 6) {
@@ -58,6 +61,19 @@ abstract class GymBaswaraDatabase : RoomDatabase() {
                 
                 db.execSQL("CREATE INDEX `index_routine_exercise_cross_ref_routineId` ON `routine_exercise_cross_ref` (`routineId`)")
                 db.execSQL("CREATE INDEX `index_routine_exercise_cross_ref_exerciseId` ON `routine_exercise_cross_ref` (`exerciseId`)")
+            }
+        }
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE `body_metrics` (`id` TEXT NOT NULL, `weightKg` REAL, `bodyFatPercent` REAL, `chestCm` REAL, `waistCm` REAL, `armCm` REAL, `thighCm` REAL, `notes` TEXT, `recordedAt` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))
+                """.trimIndent())
+            }
+        }
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE routines ADD COLUMN syncStatus TEXT NOT NULL DEFAULT 'PENDING'")
+                db.execSQL("ALTER TABLE body_metrics ADD COLUMN syncStatus TEXT NOT NULL DEFAULT 'PENDING'")
             }
         }
     }

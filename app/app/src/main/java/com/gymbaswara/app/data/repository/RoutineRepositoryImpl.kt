@@ -1,18 +1,22 @@
 package com.gymbaswara.app.data.repository
 
+import android.content.Context
 import com.gymbaswara.app.core.database.dao.RoutineDao
 import com.gymbaswara.app.core.database.entity.RoutineEntity
 import com.gymbaswara.app.core.database.entity.RoutineExerciseCrossRef
+import com.gymbaswara.app.core.sync.SyncScheduler
 import com.gymbaswara.app.data.mapper.toDomain
 import com.gymbaswara.app.domain.model.Routine
 import com.gymbaswara.app.domain.repository.RoutineRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class RoutineRepositoryImpl @Inject constructor(
-    private val routineDao: RoutineDao
+    private val routineDao: RoutineDao,
+    @ApplicationContext private val context: Context
 ) : RoutineRepository {
 
     override fun getAllRoutines(): Flow<List<Routine>> {
@@ -22,8 +26,9 @@ class RoutineRepositoryImpl @Inject constructor(
             routinesWithExercises.map { routineWithEx ->
                 val routineRefs = crossRefsByRoutine[routineWithEx.routine.id] ?: emptyList()
                 val sortedRefs = routineRefs.sortedBy { it.orderIndex }
+                val exerciseById = routineWithEx.exercises.associateBy { it.id }
                 val exercises = sortedRefs.mapNotNull { ref ->
-                    val exEntity = routineWithEx.exercises.find { it.id == ref.exerciseId }
+                    val exEntity = exerciseById[ref.exerciseId]
                     if (exEntity != null) {
                         com.gymbaswara.app.domain.model.RoutineExercise(
                             instanceId = ref.id,
@@ -48,8 +53,9 @@ class RoutineRepositoryImpl @Inject constructor(
         return routineDao.getRoutineById(id).combine(routineDao.getCrossRefsByRoutineId(id)) { routineWithEx, crossRefs ->
             routineWithEx?.let {
                 val sortedRefs = crossRefs.sortedBy { it.orderIndex }
+                val exerciseById = it.exercises.associateBy { entity -> entity.id }
                 val exercises = sortedRefs.mapNotNull { ref ->
-                    val exEntity = it.exercises.find { entity -> entity.id == ref.exerciseId }
+                    val exEntity = exerciseById[ref.exerciseId]
                     if (exEntity != null) {
                         com.gymbaswara.app.domain.model.RoutineExercise(
                             instanceId = ref.id,
@@ -76,7 +82,8 @@ class RoutineRepositoryImpl @Inject constructor(
             name = routine.name,
             description = routine.description,
             createdAt = routine.createdAt,
-            updatedAt = routine.updatedAt
+            updatedAt = routine.updatedAt,
+            syncStatus = "PENDING"
         )
         val crossRefs = routine.exercises.mapIndexed { index, routineEx ->
             RoutineExerciseCrossRef(
@@ -88,9 +95,15 @@ class RoutineRepositoryImpl @Inject constructor(
             )
         }
         routineDao.insertRoutineWithExercises(routineEntity, crossRefs)
+        SyncScheduler.enqueue(context)
     }
 
     override suspend fun deleteRoutine(id: String) {
-        routineDao.deleteRoutine(id)
+        if (routineDao.getSyncStatus(id) == "SYNCED") {
+            routineDao.markPendingDelete(id)
+        } else {
+            routineDao.deleteRoutine(id)
+        }
+        SyncScheduler.enqueue(context)
     }
 }

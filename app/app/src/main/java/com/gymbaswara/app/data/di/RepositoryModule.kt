@@ -29,4 +29,16 @@ abstract class RepositoryModule {
     abstract fun bindRoutineRepository(
         routineRepositoryImpl: com.gymbaswara.app.data.repository.RoutineRepositoryImpl
     ): com.gymbaswara.app.domain.repository.RoutineRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAuthRepository(
+        authRepositoryImpl: com.gymbaswara.app.data.repository.AuthRepositoryImpl
+    ): com.gymbaswara.app.domain.repository.AuthRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBodyMetricRepository(
+        bodyMetricRepositoryImpl: com.gymbaswara.app.data.repository.BodyMetricRepositoryImpl
+    ): com.gymbaswara.app.domain.repository.BodyMetricRepository
 }

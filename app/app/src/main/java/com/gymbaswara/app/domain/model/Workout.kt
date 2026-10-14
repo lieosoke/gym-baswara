@@ -5,7 +5,8 @@ data class Workout(
     val routineId: String? = null,
     val name: String,
     val durationSeconds: Int,
-    val exercises: List<WorkoutExercise>
+    val exercises: List<WorkoutExercise>,
+    val startedAtMillis: Long = 0L
 )
 
 data class WorkoutExercise(

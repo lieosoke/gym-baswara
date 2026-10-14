@@ -1,9 +1,23 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
 }
+
+// Kredensial signing dibaca dari local.properties (gitignored) atau env var,
+// tidak pernah ditulis di kode sumber.
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+fun signingProperty(key: String, fallback: String = ""): String =
+    localProperties.getProperty(key) ?: System.getenv(key) ?: fallback
 
 android {
     namespace = "com.gymbaswara.app"
@@ -25,15 +39,15 @@ android {
     signingConfigs {
         create("release") {
             storeFile = file("gymbaswara_production.jks")
-            storePassword = "110626@Arkadlidzi" // <-- Isi dengan password Anda
-            keyAlias = "gymbaswara" // <-- Ini alias default-nya, biarkan saja
-            keyPassword = "110626@Arkadlidzi" // <-- Isi dengan password Anda (biasanya sama)
+            storePassword = signingProperty("GYMBASWARA_STORE_PASSWORD")
+            keyAlias = signingProperty("GYMBASWARA_KEY_ALIAS", "gymbaswara")
+            keyPassword = signingProperty("GYMBASWARA_KEY_PASSWORD")
         }
     }
 
     buildTypes {
         debug {
-            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/\"")
+            buildConfigField("String", "BASE_URL", "\"http://192.168.1.5:8080/\"")
         }
         release {
             isMinifyEnabled = true
@@ -43,7 +57,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "BASE_URL", "\"https://api.gymbaswara.com/\"")
+            buildConfigField("String", "BASE_URL", "\"https://gymbaswara-api.onrender.com/\"")
         }
     }
     compileOptions {
