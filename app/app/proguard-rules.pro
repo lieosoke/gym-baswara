@@ -21,7 +21,7 @@
 #-renamesourcefileattribute SourceFile
 
 # Retrofit
--keepattributes Signature, InnerClasses, EnclosingMethod
+-keepattributes Signature, InnerClasses, EnclosingMethod, *Annotation*
 -keepclassmembers,allowshrinking,allowobfuscation interface * {
     @retrofit2.http.* <methods>;
 }
@@ -34,6 +34,7 @@
 -keep class com.google.gson.reflect.TypeToken { *; }
 -keep class * extends com.google.gson.reflect.TypeToken
 -keep class com.google.gson.** { *; }
+-keep class com.gymbaswara.app.core.network.** { *; }
 
 # Hilt / Dagger
 -keep class dagger.hilt.** { *; }

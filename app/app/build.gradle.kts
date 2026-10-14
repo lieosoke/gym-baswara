@@ -57,7 +57,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "BASE_URL", "\"https://gymbaswara-api.onrender.com/\"")
+            buildConfigField("String", "BASE_URL", "\"https://gymbaswaraapi-r1gfxmv6.b4a.run/\"")
         }
     }
     compileOptions {
