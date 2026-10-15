@@ -79,7 +79,7 @@ interface WorkoutDao {
             ORDER BY w.createdAt DESC
             LIMIT 1
         )
-        ORDER BY ws.setNumber ASC
+        ORDER BY ws.setNumber ASC, ws.completedAt DESC
     """)
     suspend fun getLastPerformanceSets(exerciseId: String): List<WorkoutSetEntity>
 

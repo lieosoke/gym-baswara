@@ -37,9 +37,14 @@ class WorkoutRepositoryImpl @Inject constructor(
             updatedAt = now
         )
 
+        // ID exercise harus baru per workout. Memakai ulang ID sesi/routine
+        // sebagai PK menyebabkan set sesi lama menumpuk (REPLACE menimpa
+        // exercise tapi set lama tidak terhapus) -> riwayat jadi double.
+        val freshExerciseIds = workout.exercises.associate { it.id to java.util.UUID.randomUUID().toString() }
+
         val exerciseEntities = workout.exercises.mapIndexed { index, ex ->
             WorkoutExerciseEntity(
-                id = ex.id,
+                id = freshExerciseIds[ex.id] ?: ex.id,
                 workoutId = workout.id,
                 exerciseId = ex.exerciseId,
                 orderIndex = index,
@@ -49,10 +54,11 @@ class WorkoutRepositoryImpl @Inject constructor(
         }
 
         val setEntities = workout.exercises.flatMap { ex ->
+            val freshExId = freshExerciseIds[ex.id] ?: ex.id
             ex.sets.map { set ->
                 WorkoutSetEntity(
                     id = set.id,
-                    workoutExerciseId = ex.id,
+                    workoutExerciseId = freshExId,
                     setNumber = set.setNumber,
                     setType = "normal",
                     weight = set.weight,
@@ -84,6 +90,7 @@ class WorkoutRepositoryImpl @Inject constructor(
                 setNumber = it.setNumber,
                 weight = it.weight,
                 reps = it.reps,
+                durationSeconds = it.durationSeconds,
                 isCompleted = it.isCompleted
             )
         }

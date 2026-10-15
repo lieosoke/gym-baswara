@@ -1,16 +1,19 @@
 package com.gymbaswara.app.feature.home
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -20,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,15 +46,22 @@ fun HomeScreen(
     val monthlyStats by viewModel.monthlyStats.collectAsState()
     val yearlyStats by viewModel.yearlyStats.collectAsState()
     val isWorkoutActive by viewModel.isWorkoutActive.collectAsState()
-    
+
     var selectedTabIndex by remember { mutableStateOf(0) }
     var showVolumeInfo by remember { mutableStateOf(false) }
-    val tabTitles = listOf("Minggu", "Bulan", "Tahun")
-    
+    val tabTitles = remember { listOf("Minggu", "Bulan", "Tahun") }
+
     val currentStats = when (selectedTabIndex) {
         0 -> weeklyStats
         1 -> monthlyStats
         else -> yearlyStats
+    }
+
+    val (sessionStr, volumePair, durationPair) = remember(currentStats) {
+        val count = currentStats?.sessionCount ?: 0
+        val vol = formatVolume(currentStats?.totalVolume ?: 0.0)
+        val dur = formatDuration(currentStats?.totalDurationSeconds ?: 0)
+        Triple(count.toString(), vol, dur)
     }
 
     Scaffold(
@@ -61,11 +72,10 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                // Custom Greeting Header
+            item(key = "header") {
+                Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -73,289 +83,426 @@ fun HomeScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Halo Gengs!",
-                            style = MaterialTheme.typography.headlineMedium,
+                            text = "Halo, Atlet!",
+                            style = MaterialTheme.typography.headlineLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
                         )
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Selagi sehat kita gas Sehattt terus.",
+                            text = "Bangun konsistensi dan kekuatan hari ini.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    IconButton(onClick = onNavigateToProfile) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = "Profil",
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(
-                            Icons.Default.Settings,
-                            contentDescription = "Pengaturan",
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = onNavigateToProfile,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                        ) {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Profil Pengguna",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = onNavigateToSettings,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                        ) {
+                            Icon(
+                                Icons.Default.Settings,
+                                contentDescription = "Pengaturan Aplikasi",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
                 }
             }
 
-            item {
-                // Banner Mulai Latihan - High Contrast Neon CTA
+            item(key = "hero_workout") {
+                val heroContainerColor = if (isWorkoutActive) {
+                    MaterialTheme.colorScheme.tertiary
+                } else {
+                    MaterialTheme.colorScheme.primary
+                }
+
+                val heroContentColor = if (isWorkoutActive) {
+                    MaterialTheme.colorScheme.onTertiary
+                } else {
+                    MaterialTheme.colorScheme.onPrimary
+                }
+
                 Card(
                     onClick = if (isWorkoutActive) onResumeWorkout else onNavigateToWorkout,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 110.dp),
+                    shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isWorkoutActive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
-                    )
+                        containerColor = heroContainerColor
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(24.dp),
+                            .padding(22.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
+                            if (isWorkoutActive) {
+                                Surface(
+                                    color = heroContentColor.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(100.dp),
+                                    modifier = Modifier.padding(bottom = 6.dp)
+                                ) {
+                                    Text(
+                                        text = "SEDANG AKTIF",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = heroContentColor,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+
                             Text(
-                                text = if (isWorkoutActive) "Lanjutkan Latihan" else "Mulai Latihan",
+                                text = if (isWorkoutActive) "Lanjutkan Sesi Latihan" else "Mulai Latihan Baru",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = if (isWorkoutActive) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onPrimary
+                                color = heroContentColor
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = if (isWorkoutActive) "Sesi latihan Anda sedang berjalan" else "Lanjutkan program rutinitas Anda",
+                                text = if (isWorkoutActive) "Sesi latihan sedang berjalan, ketuk untuk mencatat set" else "Pilih rutinitas atau mulai latihan bebas",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = if (isWorkoutActive) MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                                color = heroContentColor.copy(alpha = 0.85f)
                             )
                         }
-                        
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
                         Box(
                             modifier = Modifier
                                 .size(56.dp)
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(if (isWorkoutActive) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onPrimary),
+                                .background(heroContentColor),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Default.PlayArrow, 
-                                contentDescription = if (isWorkoutActive) "Lanjutkan Latihan" else "Mulai Latihan",
-                                tint = if (isWorkoutActive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
+                                Icons.Default.PlayArrow,
+                                contentDescription = if (isWorkoutActive) "Lanjutkan latihan" else "Mulai latihan",
+                                tint = heroContainerColor,
                                 modifier = Modifier.size(32.dp)
                             )
                         }
                     }
                 }
             }
-            
-            // Statistik Dinamis
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Aktivitas Anda",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                    IconButton(onClick = { showVolumeInfo = true }) {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = "Cara volume dihitung",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+
+            item(key = "activity_section") {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Aktivitas",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+
+                        IconButton(
+                            onClick = { showVolumeInfo = true },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = "Informasi penghitungan volume",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    if (showVolumeInfo) {
+                        AlertDialog(
+                            onDismissRequest = { showVolumeInfo = false },
+                            shape = RoundedCornerShape(22.dp),
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            title = {
+                                Text(
+                                    text = "Cara volume dihitung",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            },
+                            text = {
+                                Text(
+                                    text = VolumeCalculator.FORMULA_EXPLANATION,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = { showVolumeInfo = false },
+                                    modifier = Modifier.heightIn(min = 48.dp)
+                                ) {
+                                    Text(
+                                        text = "Mengerti",
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        )
+                    }
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(100.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            tabTitles.forEachIndexed { index, title ->
+                                val isSelected = selectedTabIndex == index
+                                val tabBg by animateColorAsState(
+                                    targetValue = if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
+                                    animationSpec = tween(durationMillis = 180),
+                                    label = "tabBg"
+                                )
+                                val tabTextCol by animateColorAsState(
+                                    targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    animationSpec = tween(durationMillis = 180),
+                                    label = "tabTextCol"
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(100.dp))
+                                        .background(tabBg)
+                                        .clickable(
+                                            role = Role.Tab,
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null
+                                        ) { selectedTabIndex = index },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = title,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = tabTextCol
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        AppleStatCard(
+                            title = "SESI",
+                            value = sessionStr,
+                            unit = "SESI",
+                            modifier = Modifier.weight(1f)
+                        )
+                        AppleStatCard(
+                            title = "VOLUME",
+                            value = volumePair.first,
+                            unit = volumePair.second.uppercase(Locale.US),
+                            modifier = Modifier.weight(1f)
+                        )
+                        AppleStatCard(
+                            title = "DURASI",
+                            value = durationPair.first,
+                            unit = durationPair.second.uppercase(Locale.US),
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
-
-                if (showVolumeInfo) {
-                    AlertDialog(
-                        onDismissRequest = { showVolumeInfo = false },
-                        title = { Text("Cara volume dihitung", fontWeight = FontWeight.Bold) },
-                        text = { Text(VolumeCalculator.FORMULA_EXPLANATION) },
-                        confirmButton = {
-                            TextButton(onClick = { showVolumeInfo = false }) {
-                                Text("Mengerti")
-                            }
-                        }
-                    )
-                }
-                
-                // Segmented Control (Pill-shaped tabs)
-                Surface(
-                    color = MaterialTheme.colorScheme.surface,
-                    shape = RoundedCornerShape(100.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 20.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        tabTitles.forEachIndexed { index, title ->
-                            val isSelected = selectedTabIndex == index
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(100.dp))
-                                    .background(if (isSelected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null // Custom indication can be added if needed
-                                    ) { selectedTabIndex = index }
-                                    .padding(vertical = 10.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = title,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 14.sp
-                                )
-                            }
-                        }
-                    }
-                }
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    val sessionCount = currentStats?.sessionCount ?: 0
-                    val volumeKg = currentStats?.totalVolume ?: 0.0
-                    val durationSec = currentStats?.totalDurationSeconds ?: 0
-                    
-                    val (volValue, volUnit) = formatVolume(volumeKg)
-                    val (durValue, durUnit) = formatDuration(durationSec)
-                    
-                    StatCard(
-                        title = "Sesi",
-                        value = sessionCount.toString(),
-                        subtitle = "Latihan",
-                        modifier = Modifier.weight(1f)
-                    )
-                    StatCard(
-                        title = "Volume",
-                        value = volValue,
-                        subtitle = volUnit,
-                        modifier = Modifier.weight(1f)
-                    )
-                    StatCard(
-                        title = "Durasi",
-                        value = durValue,
-                        subtitle = durUnit,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-            
-            item {
-                // Rutinitas Latihan Card
-                Card(
-                    onClick = onNavigateToRoutines,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.List,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Rutinitas Latihan",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Susun program latihan siap pakai",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
             }
 
-            item {
-                // Grafik Progres Button - Sleek Dark Card
-                Card(
-                    onClick = onNavigateToProgress,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Grafik Personal Record",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Pantau perkembangan beban maksimal Anda",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(32.dp))
+            item(key = "routines_card") {
+                AppleNavigationCard(
+                    title = "Rutinitas Latihan",
+                    subtitle = "Susun program latihan siap pakai",
+                    icon = Icons.AutoMirrored.Filled.List,
+                    iconDescription = "Ikon daftar rutinitas",
+                    onClick = onNavigateToRoutines
+                )
             }
+
+            item(key = "progress_card") {
+                AppleNavigationCard(
+                    title = "Grafik Personal Record",
+                    subtitle = "Pantau perkembangan beban maksimal Anda",
+                    icon = Icons.Default.Add,
+                    iconDescription = "Ikon perkembangan rekor",
+                    onClick = onNavigateToProgress
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun AppleStatCard(
+    title: String,
+    value: String,
+    unit: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                shape = RoundedCornerShape(18.dp)
+            ),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.6.sp
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = unit,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.4.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun AppleNavigationCard(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 76.dp)
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(20.dp)
+            ),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = iconDescription,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Navigasi",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }
@@ -376,45 +523,5 @@ fun formatDuration(seconds: Int): Pair<String, String> {
         Pair(String.format(Locale.US, "%d:%02d", hours, minutes), "Jam")
     } else {
         Pair(minutes.toString(), "Menit")
-    }
-}
-
-@Composable
-fun StatCard(
-    title: String,
-    value: String,
-    subtitle: String,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
     }
 }

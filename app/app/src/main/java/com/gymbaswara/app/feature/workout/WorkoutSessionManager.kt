@@ -63,11 +63,33 @@ class WorkoutSessionManager @Inject constructor(
         _isFinishing.value = false
         _isActive.value = true
         _isPaused.value = false
-        
+
+        // ID sesi harus selalu baru. ID dari routine (instanceId) tidak boleh
+        // dipakai ulang sebagai PK workout_exercises, kalau tidak set dari
+        // sesi lama menumpuk di workoutExerciseId yang sama (REPLACE menimpa
+        // baris exercise tapi set lama tidak terhapus) -> set double di riwayat.
+        val freshExercises = exercises.map { ex ->
+            val freshSets = if (ex.sets.isEmpty()) {
+                listOf(WorkoutSetState(setNumber = 1))
+            } else {
+                ex.sets.mapIndexed { index, set ->
+                    set.copy(
+                        id = UUID.randomUUID().toString(),
+                        setNumber = index + 1,
+                        isCompleted = false
+                    )
+                }
+            }
+            ex.copy(
+                id = UUID.randomUUID().toString(),
+                sets = freshSets
+            )
+        }
+
         _dataState.value = ActiveWorkoutDataState(
             workoutName = routineName ?: "Latihan Baru",
             routineId = routineId,
-            exercises = exercises
+            exercises = freshExercises
         )
         
         _timerState.value = ActiveWorkoutTimerState(
@@ -109,13 +131,21 @@ class WorkoutSessionManager @Inject constructor(
                 if (ex.exerciseId in historyLoadedFor) return@map ex
                 processedIds.add(ex.exerciseId)
                 val historyText = workoutRepository.getLastPerformance(ex.exerciseId) ?: "Belum ada riwayat"
-                val historySets = workoutRepository.getLastPerformanceSets(ex.exerciseId)
-                
+                val rawHistorySets = workoutRepository.getLastPerformanceSets(ex.exerciseId)
+
+                // DB lama bisa berisi set menumpuk (nomor duplikat) akibat ID
+                // workoutExercise dipakai ulang lintas sesi. Dedup di memori
+                // agar tidak perlu hapus data user: satu per setNumber saja.
+                val historySets = rawHistorySets
+                    .groupBy { it.setNumber }
+                    .toSortedMap()
+                    .map { (_, group) -> group.last() }
+
                 val setsToUse = if (historySets.isNotEmpty() && ex.sets.size == 1 && ex.sets[0].weight.isEmpty() && ex.sets[0].reps.isEmpty()) {
-                    historySets.map { hs ->
+                    historySets.mapIndexed { index, hs ->
                         val weightStr = if (hs.weight % 1.0 == 0.0) hs.weight.toInt().toString() else hs.weight.toString()
                         WorkoutSetState(
-                            setNumber = hs.setNumber,
+                            setNumber = index + 1,
                             weight = if (hs.weight > 0) weightStr else "",
                             reps = if (hs.reps > 0) hs.reps.toString() else "",
                             timeSeconds = if ((hs.durationSeconds ?: 0) > 0) hs.durationSeconds.toString() else "",
