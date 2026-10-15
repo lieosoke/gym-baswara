@@ -35,6 +35,13 @@
 -keep class * extends com.google.gson.reflect.TypeToken
 -keep class com.google.gson.** { *; }
 -keep class com.gymbaswara.app.core.network.** { *; }
+# DTO JSON backup/restore, Drive, sync, dan model domain dipakai via
+# refleksi Gson. Tanpa ini R8 menghapus generic Signature List<T> sehingga
+# elemen terdeserialisasi jadi LinkedTreeMap -> ClassCastException di release.
+-keep class com.gymbaswara.app.core.backup.** { *; }
+-keep class com.gymbaswara.app.core.drive.** { *; }
+-keep class com.gymbaswara.app.core.sync.** { *; }
+-keep class com.gymbaswara.app.domain.model.** { *; }
 
 # Hilt / Dagger
 -keep class dagger.hilt.** { *; }

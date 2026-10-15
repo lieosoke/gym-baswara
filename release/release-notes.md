@@ -1,10 +1,10 @@
 # Gym Baswara - Release Notes
 
-**Version:** 1.3.1
-**versionCode:** 10
+**Version:** 1.3.2
+**versionCode:** 11
 
-**Previous Version:** 1.3.0 (versionCode: 9)
-**New Version:** 1.3.1 (versionCode: 10)
+**Previous Version:** 1.3.1 (versionCode: 10)
+**New Version:** 1.3.2 (versionCode: 11)
 
 ## Changes:
 - **Redesain Menyeluruh Apple Sporty UI (Apple Fitness Volt)**: Pembaruan total estetika antarmuka ke gaya Apple Human Interface Guidelines dan Apple Watch/Fitness+ activity styling dengan palet warna OLED Pitch Black (`#000000`), Apple Volt (`#D0FD3E`), Apple Crimson (`#FF375F`), dan Apple System Grays (`#1C1C1E`, `#2C2C2E`, `#8E8E93`).
@@ -23,6 +23,7 @@
 - Memperbesar seluruh target sentuh interaktif (tombol, ikon panah, menu opsi, hapus) menjadi minimal 48dp x 48dp untuk mencegah salah sentuh saat berolahraga.
 - Menghilangkan glitch kedipan recomposition pada daftar latihan menggunakan penanda kunci stabil (stable keys) dan memoization.
 - **Memperbaiki set latihan double/menambah sendiri pada sesi dari routine (mis. FULL BODY C)**: ID `workout_exercises` yang dipakai ulang lintas sesi menyebabkan set sesi lama menumpuk dan riwayat menampilkan nomor duplikat (`1,1,1,1,3,3`). Sekarang setiap sesi memakai ID baru, riwayat terduplikat di-dedup saat dibaca, dan prefill durasi Plank/Hold ikut terbawa.
+- **Memperbaiki crash backup/restore & hubungkan Google Drive di build release (`LinkedTreeMap cannot be cast`)**: DTO JSON backup/drive di-obfuscate R8 hingga generic `List<T>` hilang dan Gson mengembalikan `LinkedTreeMap`. ProGuard sekarang menjaga seluruh DTO (`core.backup`, `core.drive`, `core.sync`, `domain.model`).
 
 ## Database Changes:
 - Tidak ada perubahan skema database pada versi ini. Struktur tabel, entitas, DAO, dan versi database Room tetap berada pada versi 10.
