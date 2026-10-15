@@ -20,7 +20,10 @@ data class UserPreferences(
     val weightUnit: String = "kg",
     val restTimerSeconds: Int = 90,
     val onboardingDone: Boolean = false,
-    val lastSyncAt: Long = 0L
+    val lastSyncAt: Long = 0L,
+    val lastDriveBackupAt: Long = 0L,
+    val lastDriveBackupSize: Long = 0L,
+    val driveConnectedEmail: String? = null
 )
 
 @Singleton
@@ -32,6 +35,9 @@ class PreferencesManager @Inject constructor(
         val REST_TIMER = intPreferencesKey("rest_timer_seconds")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val LAST_SYNC_AT = longPreferencesKey("last_sync_at")
+        val LAST_DRIVE_BACKUP_AT = longPreferencesKey("last_drive_backup_at")
+        val LAST_DRIVE_BACKUP_SIZE = longPreferencesKey("last_drive_backup_size")
+        val DRIVE_CONNECTED_EMAIL = stringPreferencesKey("drive_connected_email")
     }
 
     val preferences: Flow<UserPreferences> = context.settingsDataStore.data.map { prefs ->
@@ -39,7 +45,10 @@ class PreferencesManager @Inject constructor(
             weightUnit = prefs[Keys.WEIGHT_UNIT] ?: "kg",
             restTimerSeconds = prefs[Keys.REST_TIMER] ?: 90,
             onboardingDone = prefs[Keys.ONBOARDING_DONE] ?: false,
-            lastSyncAt = prefs[Keys.LAST_SYNC_AT] ?: 0L
+            lastSyncAt = prefs[Keys.LAST_SYNC_AT] ?: 0L,
+            lastDriveBackupAt = prefs[Keys.LAST_DRIVE_BACKUP_AT] ?: 0L,
+            lastDriveBackupSize = prefs[Keys.LAST_DRIVE_BACKUP_SIZE] ?: 0L,
+            driveConnectedEmail = prefs[Keys.DRIVE_CONNECTED_EMAIL]
         )
     }
 
@@ -57,5 +66,25 @@ class PreferencesManager @Inject constructor(
 
     suspend fun setLastSyncAt(timestamp: Long) {
         context.settingsDataStore.edit { it[Keys.LAST_SYNC_AT] = timestamp }
+    }
+
+    suspend fun setDriveBackupInfo(timestamp: Long, sizeBytes: Long, email: String?) {
+        context.settingsDataStore.edit { prefs ->
+            prefs[Keys.LAST_DRIVE_BACKUP_AT] = timestamp
+            prefs[Keys.LAST_DRIVE_BACKUP_SIZE] = sizeBytes
+            if (email != null) {
+                prefs[Keys.DRIVE_CONNECTED_EMAIL] = email
+            }
+        }
+    }
+
+    suspend fun setDriveConnectedEmail(email: String?) {
+        context.settingsDataStore.edit { prefs ->
+            if (email != null) {
+                prefs[Keys.DRIVE_CONNECTED_EMAIL] = email
+            } else {
+                prefs.remove(Keys.DRIVE_CONNECTED_EMAIL)
+            }
+        }
     }
 }

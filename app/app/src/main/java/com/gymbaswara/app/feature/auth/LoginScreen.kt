@@ -22,6 +22,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 fun LoginScreen(
     onAuthenticated: () -> Unit,
     onNavigateToRegister: () -> Unit,
+    onContinueOffline: () -> Unit = {},
+    onNavigateToRestore: () -> Unit = {},
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     var email by remember { mutableStateOf("") }
@@ -127,7 +129,7 @@ fun LoginScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             TextButton(
                 onClick = onNavigateToRegister,
@@ -137,6 +139,41 @@ fun LoginScreen(
                     text = "Belum punya akun? Daftar di sini",
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                modifier = Modifier.fillMaxWidth(0.8f)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedButton(
+                onClick = onContinueOffline,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Text(
+                    text = "Lanjutkan Mode Offline (Tanpa Akun)",
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            TextButton(
+                onClick = onNavigateToRestore,
+                enabled = !state.isLoading
+            ) {
+                Text(
+                    text = "Sudah punya cadangan? Pulihkan dari Google Drive",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
         }

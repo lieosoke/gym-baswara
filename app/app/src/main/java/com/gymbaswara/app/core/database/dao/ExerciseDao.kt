@@ -13,6 +13,9 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercises")
     fun getAllExercises(): Flow<List<ExerciseEntity>>
 
+    @Query("SELECT * FROM exercises WHERE isSystem = 0")
+    suspend fun getCustomExercises(): List<ExerciseEntity>
+
     @Query("SELECT * FROM exercises WHERE id = :id")
     fun getExerciseById(id: String): Flow<ExerciseEntity?>
 

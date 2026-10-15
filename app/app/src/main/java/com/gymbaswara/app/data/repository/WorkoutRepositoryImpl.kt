@@ -11,6 +11,7 @@ import com.gymbaswara.app.core.sync.SyncScheduler
 import com.gymbaswara.app.domain.model.Workout
 import com.gymbaswara.app.domain.model.WorkoutSet
 import com.gymbaswara.app.domain.repository.WorkoutRepository
+import com.gymbaswara.app.domain.util.VolumeCalculator
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
@@ -30,7 +31,7 @@ class WorkoutRepositoryImpl @Inject constructor(
             startedAt = if (workout.startedAtMillis > 0) workout.startedAtMillis else now - (workout.durationSeconds * 1000L),
             completedAt = now,
             durationSeconds = workout.durationSeconds,
-            totalVolume = workout.exercises.flatMap { it.sets }.filter { it.isCompleted }.sumOf { it.weight * it.reps },
+            totalVolume = VolumeCalculator.sessionVolume(workout.exercises.flatMap { it.sets }),
             status = "completed",
             createdAt = now,
             updatedAt = now

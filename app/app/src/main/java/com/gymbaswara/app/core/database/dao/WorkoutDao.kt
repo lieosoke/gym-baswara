@@ -33,8 +33,15 @@ interface WorkoutDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWorkoutSets(sets: List<WorkoutSetEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWorkouts(workouts: List<WorkoutEntity>)
+
     @Query("SELECT * FROM workouts ORDER BY startedAt DESC")
     fun getWorkouts(): Flow<List<WorkoutEntity>>
+
+    @Transaction
+    @Query("SELECT * FROM workouts ORDER BY startedAt DESC")
+    suspend fun getAllWorkoutsWithDetails(): List<WorkoutWithDetails>
 
     @Transaction
     @Query("SELECT * FROM workouts WHERE syncStatus = 'PENDING' AND status = 'completed'")

@@ -83,6 +83,7 @@ class ActiveWorkoutViewModel @Inject constructor(
     val dataState: StateFlow<ActiveWorkoutDataState> = sessionManager.dataState
     val timerState: StateFlow<ActiveWorkoutTimerState> = sessionManager.timerState
     val isPaused: StateFlow<Boolean> = sessionManager.isPaused
+    val isFinishing: StateFlow<Boolean> = sessionManager.isFinishing
 
     fun updateWorkoutName(name: String) = sessionManager.updateWorkoutName(name)
     fun addExercise(id: String, name: String, equipment: String? = null) = sessionManager.addExercise(id, name, equipment)
@@ -94,6 +95,7 @@ class ActiveWorkoutViewModel @Inject constructor(
     fun skipRestTimer() = sessionManager.skipRestTimer()
     fun adjustRestTimer(addSeconds: Int) = sessionManager.adjustRestTimer(addSeconds)
     fun finishWorkout(onComplete: () -> Unit) = sessionManager.finishWorkout(onComplete)
+    fun discardWorkout() = sessionManager.discardWorkout()
     
     fun pauseTimer() = sessionManager.pauseTimer()
     fun resumeTimer() = sessionManager.resumeTimer()

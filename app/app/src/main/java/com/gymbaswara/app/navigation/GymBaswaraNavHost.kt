@@ -30,6 +30,7 @@ import com.gymbaswara.app.feature.profile.ProfileScreen
 import com.gymbaswara.app.feature.settings.SettingsScreen
 import com.gymbaswara.app.feature.bodymetrics.BodyMetricsScreen
 import com.gymbaswara.app.feature.onboarding.OnboardingScreen
+import com.gymbaswara.app.feature.backup.BackupRestoreScreen
 
 @Composable
 fun GymBaswaraNavHost(
@@ -77,7 +78,14 @@ fun GymBaswaraNavHost(
                         popUpTo("login") { inclusive = true }
                     }
                 },
-                onNavigateToRegister = { navController.navigate("register") }
+                onNavigateToRegister = { navController.navigate("register") },
+                onContinueOffline = {
+                    val target = if (onboardingDone == false) "onboarding" else "home"
+                    navController.navigate(target) {
+                        popUpTo("login") { inclusive = true }
+                    }
+                },
+                onNavigateToRestore = { navController.navigate("backup_restore") }
             )
         }
         composable("register") {
@@ -115,6 +123,7 @@ fun GymBaswaraNavHost(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToSettings = { navController.navigate("settings") },
                 onNavigateToBodyMetrics = { navController.navigate("bodymetrics") },
+                onNavigateToBackupRestore = { navController.navigate("backup_restore") },
                 onLoggedOut = {
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }
@@ -123,7 +132,13 @@ fun GymBaswaraNavHost(
             )
         }
         composable("settings") {
-            SettingsScreen(onNavigateBack = { navController.popBackStack() })
+            SettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToBackupRestore = { navController.navigate("backup_restore") }
+            )
+        }
+        composable("backup_restore") {
+            BackupRestoreScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable("bodymetrics") {
             BodyMetricsScreen(onNavigateBack = { navController.popBackStack() })

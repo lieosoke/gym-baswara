@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 
 import android.app.Activity
 import android.view.WindowManager
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalContext
 import com.gymbaswara.app.MainActivity
@@ -55,6 +56,68 @@ fun ActiveWorkoutScreen(
 ) {
     val dataState by viewModel.dataState.collectAsState()
     val timerState by viewModel.timerState.collectAsState()
+    val isFinishing by viewModel.isFinishing.collectAsState()
+
+    var showFinishDialog by remember { mutableStateOf(false) }
+
+    val totalExercises = dataState.exercises.size
+    val totalSets = dataState.exercises.sumOf { it.sets.size }
+    val completedSets = dataState.exercises.sumOf { ex -> ex.sets.count { it.isCompleted } }
+    val totalVolume = dataState.exercises.sumOf { ex ->
+        ex.sets.filter { it.isCompleted }.sumOf {
+            (it.weight.toDoubleOrNull() ?: 0.0) * (it.reps.toIntOrNull() ?: 0)
+        }
+    }
+    val isShortSession = timerState.workoutDurationSeconds < 300
+
+    BackHandler(enabled = !isFinishing) {
+        showFinishDialog = true
+    }
+
+    if (showFinishDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isFinishing) showFinishDialog = false },
+            title = { Text("Akhiri Latihan?", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("Total exercise: $totalExercises")
+                    Text("Total set: $totalSets ($completedSets selesai)")
+                    Text("Total volume: ${String.format(java.util.Locale.US, "%.0f", totalVolume)} kg")
+                    Text("Durasi: ${timerState.formattedWorkoutTimer}")
+                    if (isShortSession) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Sesi di bawah 5 menit tidak disimpan.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showFinishDialog = false
+                        viewModel.finishWorkout { onFinishWorkout() }
+                    },
+                    enabled = !isFinishing,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(if (isFinishing) "Menyimpan..." else "Ya, Akhiri")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showFinishDialog = false },
+                    enabled = !isFinishing
+                ) {
+                    Text("Lanjut Latihan")
+                }
+            }
+        )
+    }
 
     val context = LocalContext.current
     DisposableEffect(Unit) {
@@ -173,7 +236,8 @@ fun ActiveWorkoutScreen(
                 }
 
                 Button(
-                    onClick = { viewModel.finishWorkout { onFinishWorkout() } },
+                    onClick = { showFinishDialog = true },
+                    enabled = !isFinishing,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)

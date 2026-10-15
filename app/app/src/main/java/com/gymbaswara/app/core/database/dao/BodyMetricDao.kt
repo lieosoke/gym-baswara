@@ -10,6 +10,9 @@ interface BodyMetricDao {
     @Query("SELECT * FROM body_metrics WHERE syncStatus != 'PENDING_DELETE' ORDER BY recordedAt DESC")
     fun getAll(): Flow<List<BodyMetricEntity>>
 
+    @Query("SELECT * FROM body_metrics WHERE syncStatus != 'PENDING_DELETE' ORDER BY recordedAt DESC")
+    suspend fun getAllOnce(): List<BodyMetricEntity>
+
     @Query("SELECT * FROM body_metrics WHERE syncStatus != 'PENDING_DELETE' ORDER BY recordedAt DESC LIMIT 1")
     fun getLatest(): Flow<BodyMetricEntity?>
 

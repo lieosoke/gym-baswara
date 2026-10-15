@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gymbaswara.app.domain.util.VolumeCalculator
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,6 +44,7 @@ fun HomeScreen(
     val isWorkoutActive by viewModel.isWorkoutActive.collectAsState()
     
     var selectedTabIndex by remember { mutableStateOf(0) }
+    var showVolumeInfo by remember { mutableStateOf(false) }
     val tabTitles = listOf("Minggu", "Bulan", "Tahun")
     
     val currentStats = when (selectedTabIndex) {
@@ -150,13 +153,39 @@ fun HomeScreen(
             
             // Statistik Dinamis
             item {
-                Text(
-                    text = "Aktivitas Anda",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Aktivitas Anda",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    IconButton(onClick = { showVolumeInfo = true }) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = "Cara volume dihitung",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                if (showVolumeInfo) {
+                    AlertDialog(
+                        onDismissRequest = { showVolumeInfo = false },
+                        title = { Text("Cara volume dihitung", fontWeight = FontWeight.Bold) },
+                        text = { Text(VolumeCalculator.FORMULA_EXPLANATION) },
+                        confirmButton = {
+                            TextButton(onClick = { showVolumeInfo = false }) {
+                                Text("Mengerti")
+                            }
+                        }
+                    )
+                }
                 
                 // Segmented Control (Pill-shaped tabs)
                 Surface(

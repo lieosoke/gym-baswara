@@ -42,6 +42,13 @@ class WorkoutSessionManager @Inject constructor(
     private val _isPaused = MutableStateFlow(false)
     val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
 
+    private val _isFinishing = MutableStateFlow(false)
+    val isFinishing: StateFlow<Boolean> = _isFinishing.asStateFlow()
+
+    // Exercise IDs yang riwayatnya sudah dimuat sekali. Mencegah loadHistory
+    // menimpa input user saat addExercise dipanggil berulang (idempoten).
+    private val historyLoadedFor = mutableSetOf<String>()
+
     private var timerJob: Job? = null
     private var workoutStartTime: Long = 0L
     private var workoutStartWallClock: Long = 0L
@@ -51,7 +58,9 @@ class WorkoutSessionManager @Inject constructor(
 
     fun startWorkout(routineId: String?, routineName: String?, exercises: List<WorkoutExerciseState> = emptyList()) {
         if (_isActive.value) return
-        
+
+        historyLoadedFor.clear()
+        _isFinishing.value = false
         _isActive.value = true
         _isPaused.value = false
         
@@ -76,10 +85,29 @@ class WorkoutSessionManager @Inject constructor(
         loadHistoryForExercises()
     }
 
-    private fun loadHistoryForExercises() {
+    fun discardWorkout() {
+        timerJob?.cancel()
+        timerJob = null
+        historyLoadedFor.clear()
+        _isActive.value = false
+        _isPaused.value = false
+        _isFinishing.value = false
+        _dataState.value = ActiveWorkoutDataState()
+        _timerState.value = ActiveWorkoutTimerState()
+        workoutStartTime = 0L
+        workoutStartWallClock = 0L
+        totalPausedDurationMillis = 0L
+        targetRestEndTime = 0L
+    }
+
+    private fun loadHistoryForExercises(onlyExerciseId: String? = null) {
         scope.launch {
             val currentExercises = _dataState.value.exercises
+            val processedIds = mutableSetOf<String>()
             val updatedExercises = currentExercises.map { ex ->
+                if (onlyExerciseId != null && ex.id != onlyExerciseId) return@map ex
+                if (ex.exerciseId in historyLoadedFor) return@map ex
+                processedIds.add(ex.exerciseId)
                 val historyText = workoutRepository.getLastPerformance(ex.exerciseId) ?: "Belum ada riwayat"
                 val historySets = workoutRepository.getLastPerformanceSets(ex.exerciseId)
                 
@@ -100,6 +128,7 @@ class WorkoutSessionManager @Inject constructor(
 
                 ex.copy(lastPerformance = historyText, sets = setsToUse)
             }
+            historyLoadedFor.addAll(processedIds)
             _dataState.update { it.copy(exercises = updatedExercises) }
         }
     }
@@ -165,11 +194,11 @@ class WorkoutSessionManager @Inject constructor(
     }
 
     fun addExercise(id: String, name: String, equipment: String? = null) {
+        val newExercise = WorkoutExerciseState(exerciseId = id, exerciseName = name, equipment = equipment)
         _dataState.update { state ->
-            val newExercise = WorkoutExerciseState(exerciseId = id, exerciseName = name, equipment = equipment)
             state.copy(exercises = state.exercises + newExercise)
         }
-        loadHistoryForExercises()
+        loadHistoryForExercises(onlyExerciseId = newExercise.id)
     }
 
     fun addSet(exerciseId: String) {
@@ -279,11 +308,14 @@ class WorkoutSessionManager @Inject constructor(
     }
 
     fun finishWorkout(onComplete: () -> Unit) {
+        if (_isFinishing.value || !_isActive.value) return
+        _isFinishing.value = true
         timerJob?.cancel()
         timerJob = null
         scope.launch {
-            val data = _dataState.value
-            val timer = _timerState.value
+            try {
+                val data = _dataState.value
+                val timer = _timerState.value
             
             // Jangan simpan latihan jika durasi kurang dari 5 menit (300 detik)
             if (timer.workoutDurationSeconds >= 300) {
@@ -317,13 +349,17 @@ class WorkoutSessionManager @Inject constructor(
                 )
                 workoutRepository.saveWorkout(workout)
             }
-            
+
+            historyLoadedFor.clear()
             _isActive.value = false
             _isPaused.value = false
             _dataState.value = ActiveWorkoutDataState()
             _timerState.value = ActiveWorkoutTimerState()
-            
+
             onComplete()
+            } finally {
+                _isFinishing.value = false
+            }
         }
     }
 }

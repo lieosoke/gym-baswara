@@ -23,6 +23,7 @@ fun ProfileScreen(
     onNavigateBack: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToBodyMetrics: () -> Unit,
+    onNavigateToBackupRestore: () -> Unit = {},
     onLoggedOut: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
@@ -94,6 +95,13 @@ fun ProfileScreen(
                 title = "Pengaturan",
                 subtitle = "Satuan berat dan jeda istirahat",
                 onClick = onNavigateToSettings
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            ProfileRow(
+                icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                title = "Cadangkan & Pulihkan",
+                subtitle = "Google Drive dan file cadangan lokal",
+                onClick = onNavigateToBackupRestore
             )
 
             Spacer(modifier = Modifier.weight(1f))

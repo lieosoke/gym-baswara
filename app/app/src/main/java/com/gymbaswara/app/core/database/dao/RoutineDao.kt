@@ -13,11 +13,17 @@ interface RoutineDao {
     suspend fun insertRoutine(routine: RoutineEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRoutines(routines: List<RoutineEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRoutineExercises(crossRefs: List<RoutineExerciseCrossRef>)
 
     @Transaction
     @Query("SELECT * FROM routines WHERE syncStatus != 'PENDING_DELETE' ORDER BY createdAt DESC")
     fun getAllRoutines(): Flow<List<RoutineWithExercises>>
+
+    @Query("SELECT * FROM routines WHERE syncStatus != 'PENDING_DELETE' ORDER BY createdAt DESC")
+    suspend fun getAllRoutinesOnce(): List<RoutineEntity>
 
     @Transaction
     @Query("SELECT * FROM routines WHERE id = :routineId AND syncStatus != 'PENDING_DELETE'")
@@ -28,6 +34,9 @@ interface RoutineDao {
 
     @Query("SELECT * FROM routine_exercise_cross_ref ORDER BY orderIndex ASC")
     fun getAllCrossRefs(): Flow<List<RoutineExerciseCrossRef>>
+
+    @Query("SELECT * FROM routine_exercise_cross_ref ORDER BY orderIndex ASC")
+    suspend fun getAllCrossRefsOnce(): List<RoutineExerciseCrossRef>
 
     @Query("SELECT * FROM routines WHERE syncStatus = 'PENDING'")
     suspend fun getPendingRoutineEntities(): List<RoutineEntity>

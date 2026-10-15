@@ -20,11 +20,12 @@ class HomeViewModel @Inject constructor(
 
     private fun getStartOfWeek(): Long {
         val calendar = Calendar.getInstance()
-        calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
+        calendar.firstDayOfWeek = Calendar.MONDAY
+        calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
         calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.clear(Calendar.MINUTE)
-        calendar.clear(Calendar.SECOND)
-        calendar.clear(Calendar.MILLISECOND)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
         return calendar.timeInMillis
     }
 
@@ -32,9 +33,9 @@ class HomeViewModel @Inject constructor(
         val calendar = Calendar.getInstance()
         calendar.set(Calendar.DAY_OF_MONTH, 1)
         calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.clear(Calendar.MINUTE)
-        calendar.clear(Calendar.SECOND)
-        calendar.clear(Calendar.MILLISECOND)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
         return calendar.timeInMillis
     }
 
@@ -42,9 +43,9 @@ class HomeViewModel @Inject constructor(
         val calendar = Calendar.getInstance()
         calendar.set(Calendar.DAY_OF_YEAR, 1)
         calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.clear(Calendar.MINUTE)
-        calendar.clear(Calendar.SECOND)
-        calendar.clear(Calendar.MILLISECOND)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
         return calendar.timeInMillis
     }
 

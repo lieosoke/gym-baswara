@@ -41,4 +41,10 @@ abstract class RepositoryModule {
     abstract fun bindBodyMetricRepository(
         bodyMetricRepositoryImpl: com.gymbaswara.app.data.repository.BodyMetricRepositoryImpl
     ): com.gymbaswara.app.domain.repository.BodyMetricRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBackupRepository(
+        backupRepositoryImpl: com.gymbaswara.app.data.repository.BackupRepositoryImpl
+    ): com.gymbaswara.app.domain.repository.BackupRepository
 }

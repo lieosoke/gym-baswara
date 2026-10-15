@@ -47,7 +47,9 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "BASE_URL", "\"http://192.168.1.5:8080/\"")
+            // 10.0.2.2 adalah loopback host machine dari sudut pandang emulator Android.
+            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/\"")
+            manifestPlaceholders["allowCleartext"] = "true"
         }
         release {
             isMinifyEnabled = true
@@ -58,6 +60,7 @@ android {
                 "proguard-rules.pro"
             )
             buildConfigField("String", "BASE_URL", "\"https://gymbaswaraapi-r1gfxmv6.b4a.run/\"")
+            manifestPlaceholders["allowCleartext"] = "false"
         }
     }
     compileOptions {
@@ -118,6 +121,9 @@ dependencies {
     
     // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // Google Play Services Auth (Google Sign-In & Google Drive OAuth)
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
     
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
